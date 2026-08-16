@@ -1,92 +1,173 @@
-name: CI — Evil Sheep Trap
+name: Verify Pikov WebSec Lab
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ------------------------------------------------------------------
-  # Lint & dependency audit
-  # ------------------------------------------------------------------
-  lint:
-    runs-on: ubuntu-latest
+  quality:
+    name: Python, policy and dependency checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Check out the reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt flake8 bandit safety
+      - name: Install locked development dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
 
-      - name: Lint with flake8
-        run: flake8 app.py --max-line-length=120 --ignore=E501,W503 || true
+      - name: Enforce source style
+        run: flake8 app.py src tests
 
-      - name: SAST scan with Bandit
-        run: bandit -r app.py -f json -o bandit-report.json || true
+      - name: Run unit, integration, UI-contract and configuration tests
+        run: >-
+          pytest -m "not e2e" --cov=pikov_websec_lab --cov-branch
+          --cov-report=term-missing --cov-fail-under=85
 
-      - name: Check dependencies for known vulnerabilities
-        run: safety check -r requirements.txt --json-output safety-report.json || true
+      - name: Check runtime dependencies for known vulnerabilities
+        run: pip-audit --strict -r requirements.lock
 
-      - name: Upload Bandit report
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: bandit-report.json
-
-  # ------------------------------------------------------------------
-  # Build & health-check the Docker image
-  # ------------------------------------------------------------------
-  docker-build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: evil-sheep-trap:test
-          load: true
-
-      - name: Run container & health check
+      - name: Generate source dependency SBOM (CycloneDX)
         run: |
-          docker run -d --name test-container -p 8080:8080 evil-sheep-trap:test
-          sleep 5
-          curl -sf http://localhost:8080/health | python -m json.tool
-          docker stop test-container && docker rm test-container
+          mkdir -p artifacts
+          cyclonedx-py requirements requirements.lock --of JSON --output-file artifacts/source-sbom.cdx.json
 
-  # ------------------------------------------------------------------
-  # Trivy container scan (security)
-  # ------------------------------------------------------------------
-  trivy-scan:
-    runs-on: ubuntu-latest
-    needs: docker-build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run SAST
+        run: |
+          bandit -r src app.py -f sarif -o artifacts/bandit.sarif
 
-      - name: Build image for scanning
-        run: docker build -t evil-sheep-trap:trivy .
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          image-ref: "evil-sheep-trap:trivy"
-          format: "table"
-          severity: "CRITICAL,HIGH"
-          exit-code: 1
+          name: source-security-evidence
+          path: artifacts/
+          if-no-files-found: warn
+
+      - name: Publish Bandit SARIF
+        if: >-
+          always() && hashFiles('artifacts/bandit.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3.28.10
+        with:
+          sarif_file: artifacts/bandit.sarif
+
+  browser:
+    name: Browser acceptance tests
+    needs: quality
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+
+      - name: Install locked test dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
+
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Exercise vulnerable and hardened modes
+        env:
+          INSTRUCTOR_TOKEN: ci-instructor-token
+          SECRET_KEY: ci-session-secret
+        run: pytest -m e2e -q
+
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-evidence
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+
+  container:
+    name: Container hardening and image scan
+    needs: quality
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build and start the complete local-only topology
+        env:
+          SECRET_KEY: ci-session-secret
+          INSTRUCTOR_TOKEN: ci-instructor-token
+          LAB_PORT: 8080
+        run: docker compose -p pikov-ci -f docker-compose.yml up --build --detach --wait
+
+      - name: Verify loopback gateway and isolated application runtime
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8080/health | python -m json.tool
+          test "$(docker inspect pikov-ci-svg-chat-1 --format '{{json .HostConfig.PortBindings}}')" = "{}"
+          test "$(docker inspect pikov-ci-gateway-1 --format '{{json .HostConfig.PortBindings}}')" != "{}"
+
+      - name: Scan actionable HIGH and CRITICAL image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: pikov-websec-lab:local
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          vuln-type: os,library
+          exit-code: "1"
+
+      - name: Prepare image-SBOM directory
+        run: mkdir -p artifacts
+
+      - name: Generate image SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: pikov-websec-lab:local
+          format: cyclonedx
+          output: artifacts/image-sbom.cdx.json
+          exit-code: "0"
+
+      - name: Scan pinned gateway image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: nginxinc/nginx-unprivileged:1.30.4-alpine@sha256:44e36330f74d4f3a1d4e222acca9e23b401fb87811a7597024502bb759c4dd49
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          vuln-type: os,library
+          exit-code: "1"
+
+      - name: Upload image SBOM
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: image-sbom
+          path: artifacts/image-sbom.cdx.json
+          if-no-files-found: warn
+
+      - name: Remove test topology
+        if: always()
+        run: docker compose -p pikov-ci -f docker-compose.yml down --remove-orphans || true

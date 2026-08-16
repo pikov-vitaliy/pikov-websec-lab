@@ -1,61 +1,51 @@
-# =============================================================================
-# Evil Sheep Trap — Educational Stored XSS Training Platform
-# Multi-stage Dockerfile with security hardening
-# =============================================================================
+# syntax=docker/dockerfile:1.10@sha256:865e5dd094beca432e8c0a1d5e1c465db5f998dca4e439981029b3b81fb39ed5
 
-# -----------------------------------------------------------------------------
-# Stage 1: Build — install Python dependencies
-# -----------------------------------------------------------------------------
-FROM python:3.12-slim AS builder
+# Pinned multi-platform digest for Python 3.12.14 slim (reviewed 2026-08-16).
+FROM python:3.12.14-slim@sha256:dd29372629eeba2dd003fd9e9d35a5b8236c44727875a0364254b5127af88e65 AS builder
 
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 
-# Install deps in a virtual env for clean extraction
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
+COPY requirements.lock ./requirements.lock
+RUN pip install --require-hashes -r requirements.lock
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/venv -r requirements.txt
+FROM python:3.12.14-slim@sha256:dd29372629eeba2dd003fd9e9d35a5b8236c44727875a0364254b5127af88e65 AS runtime
 
-# -----------------------------------------------------------------------------
-# Stage 2: Runtime — minimal image, non-root user
-# -----------------------------------------------------------------------------
-FROM python:3.12-slim AS runtime
-
-# Metadata labels
-LABEL org.opencontainers.image.title="Evil Sheep Trap" \
-      org.opencontainers.image.description="Educational Stored XSS Training Platform" \
-      org.opencontainers.image.version="2.0.0" \
+LABEL org.opencontainers.image.title="Pikov WebSec Lab: Evil Sheep Trap" \
+      org.opencontainers.image.description="Isolated educational lab for stored XSS in active SVG" \
+      org.opencontainers.image.source="https://github.com/pikov-vitaliy/pikov-websec-lab" \
+      org.opencontainers.image.url="https://github.com/nvmediagithub/evil_sheep_trap" \
       org.opencontainers.image.licenses="MIT"
 
-# Security: run as non-root
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \
-    && mkdir -p /data/uploads /app/templates \
-    && chown -R appuser:appuser /data /app
+ENV PATH="/venv/bin:$PATH" \
+    PYTHONPATH="/app/src" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOST=0.0.0.0 \
+    PORT=8080 \
+    UPLOAD_DIR=/data/uploads
+
+RUN groupadd --gid 10001 labuser \
+    && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin labuser \
+    && mkdir -p /app /data/uploads \
+    && chown -R 10001:10001 /app /data
 
 WORKDIR /app
-
-# Copy venv from builder
 COPY --from=builder /venv /venv
-ENV PATH="/venv/bin:$PATH"
+COPY --chown=10001:10001 app.py ./app.py
+COPY --chown=10001:10001 src/ ./src/
+COPY --chown=10001:10001 templates/ ./templates/
+COPY --chown=10001:10001 static/ ./static/
+COPY --chown=10001:10001 labs/ ./labs/
 
-# Copy application code
-COPY app.py .
-COPY templates/ templates/
-
-# Ensure upload dir is writable
-RUN chmod -R 755 /data/uploads
-
+USER 10001:10001
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
-
-# Switch to non-root user
-USER appuser
-
-ENV PYTHONUNBUFFERED=1 \
-    UPLOAD_DIR=/data/uploads \
-    LOG_LEVEL=INFO
+HEALTHCHECK --interval=20s --timeout=3s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
 
 CMD ["python", "app.py"]

@@ -1,0 +1,119 @@
+schema_version: "1.0"
+id: svg-stored-xss
+title: "Active SVG Stored XSS"
+status: implemented
+difficulty: introductory
+estimated_minutes: 30
+
+purpose: >-
+  Demonstrate that a stored, same-origin SVG embedded as an object creates an
+  active nested document and can exercise the victim browser's same-origin
+  request authority.
+
+delivery:
+  default_mode: vulnerable
+  protected_mode: hardened
+  student_guide: ../../docs/student-guide.md
+  instructor_guide: ../../docs/instructor-guide.md
+  assessment_rubric: ../../docs/assessment-rubric.md
+  analysis: ../../docs/vulnerability-analysis.md
+
+roles:
+  attacker: "ЗлойБаран"
+  victim: "ДобраяОвечка"
+
+payload:
+  id: svg-canary-v1
+  file: canary.svg
+  content_type: image/svg+xml
+  correlation: >-
+    The server adds payload_id and marker to the SVG object's own query string.
+    The canary reads only this server-issued metadata, not user data.
+  callbacks:
+    - method: POST
+      path: /api/lab-events
+      purpose: "Record a fixed PAYLOAD_EXECUTED evidence event."
+      json_fields: [type, payload_id, marker]
+    - method: POST
+      path: /api/send_message
+      purpose: "Demonstrate a fixed same-origin forged action without reading data."
+      json_fields: [text, payload_id, marker, lab_event]
+  prohibited_behavior:
+    - "Reading document.cookie or any credential."
+    - "Reading form fields, keystrokes, storage, clipboard, or files."
+    - "Calling an absolute, external, or public URL."
+    - "Loading third-party code or creating persistence."
+
+scenario:
+  source: "POST /send_message SVG attachment addressed to the seeded victim"
+  storage: "Ephemeral upload storage and in-memory message reference"
+  sink: "Server-generated object element with type image/svg+xml"
+  execution_context: "Same-origin SVG nested browsing context"
+  safe_evidence:
+    event_type: PAYLOAD_EXECUTED
+    correlation: "Server-issued payload_id and marker"
+    forged_action_text: "🐑 Safe canary: forged action demonstrated"
+    accepted_actor: "victim (seeded uid=2)"
+
+mappings:
+  cwe:
+    - id: CWE-79
+      name: "Improper Neutralization of Input During Web Page Generation"
+  owasp_top_10:
+    current: "A05:2025 - Injection"
+    former: "A03:2021 - Injection"
+  wstg:
+    - WSTG-v42-INPV-02
+    - WSTG-v42-BUSL-08
+    - WSTG-v42-BUSL-09
+  asvs_5_0_0:
+    - "1.2.1"
+    - "1.3.1"
+    - "1.3.4"
+    - "5.1.1"
+    - "5.2.1"
+    - "5.2.2"
+    - "5.3.1"
+  interpretation: >-
+    These identifiers are verification lenses, not a blanket claim that every
+    requirement is violated or satisfied. ASVS 1.3.4 is the direct SVG control;
+    ASVS 5.3.1 records that server-side file execution remains out of scope and
+    must stay blocked.
+
+intentional_conditions:
+  - "The vulnerable mode accepts the provided active SVG canary."
+  - "The application embeds the stored SVG using an object element."
+  - "The vulnerable policy permits the object to load and execute."
+
+hardened_acceptance:
+  - "The provided active SVG is rejected with HTTP 415 and active_svg_blocked."
+  - "Untrusted content is not embedded with object or embed."
+  - "Content-Security-Policy includes object-src 'none'."
+  - "The same canary cannot emit PAYLOAD_EXECUTED or FORGED_ACTION."
+  - "The evidence timeline contains CONTROL_BLOCKED for the rejected upload."
+  - "The response identifies a safe rejection without echoing active markup."
+
+unsafe_non_solutions:
+  - "Removing only literal script elements with a regular expression."
+  - "Setting HttpOnly while continuing to execute attacker-controlled script."
+  - "Hiding the resulting message without blocking payload execution."
+
+non_claims:
+  - "This lab does not establish a standalone CWE-434 upload exploit."
+  - "This lab does not establish classic CSRF (CWE-352)."
+  - "This lab does not implement cookie-attribute or IDOR lessons."
+
+reset:
+  soft:
+    method: POST
+    path: /clear_chat
+    authorization: >-
+      Authenticated synthetic user session plus instructor token in a form field
+      or X-Lab-Token header
+  full: "docker compose down --volumes"
+
+safety:
+  allowed_base_url: http://127.0.0.1:8080
+  deployment: "One isolated container per learner or pair"
+  network: "Offline or isolated private network; no public callbacks"
+  data: "Synthetic identities and fixed markers only"

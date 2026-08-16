@@ -1,201 +1,163 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>📊 Attack Dashboard — Evil Sheep Trap</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+{% extends "base.html" %}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+{% block title %}Pikov WebSec Lab — Панель доказательств{% endblock %}
 
-:root {
-  --purple:     #8b5cf6;
-  --pink:       #f472b6;
-  --red:        #ef4444;
-  --red-glow:   rgba(239,68,68,.2);
-  --amber:      #fbbf24;
-  --green:      #34d399;
-  --bg-deep:    #0c0a1d;
-  --surface:    rgba(255,255,255,.04);
-  --border:     rgba(255,255,255,.08);
-}
-
-body {
-  min-height: 100vh; padding: 28px 20px;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  color: #e2e8f0;
-  background:
-    radial-gradient(ellipse at 30% 20%, rgba(139,92,246,.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(244,114,182,.08) 0%, transparent 50%),
-    linear-gradient(160deg, #0c0a1d, #1a1333 50%, #0f172a);
-}
-
-.dglass {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 24px; backdrop-filter: blur(12px);
-  box-shadow: 0 8px 36px rgba(0,0,0,.3); position: relative; overflow: hidden;
-}
-
-.lang-toggle {
-  display: flex; gap: 2px; padding: 3px; background: rgba(255,255,255,.06);
-  border-radius: 999px; border: 1px solid var(--border); width: fit-content; margin-bottom: 24px;
-}
-.lang-btn {
-  padding: 6px 14px; border-radius: 999px; border: none; cursor: pointer;
-  font-size: 12px; font-weight: 700; font-family: inherit;
-  background: transparent; color: #94a3b8; transition: all .25s;
-}
-.lang-btn.active { background: var(--purple); color: #fff; }
-
-[data-lang="en"] { display: none; }
-body.lang-en [data-lang="en"] { display: inline; }
-body.lang-en [data-lang="ru"] { display: none; }
-
-.back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--pink); text-decoration: none; font-size: 13px; margin-bottom: 24px; }
-.back-link:hover { text-decoration: underline; }
-
-h1 { font-size: 30px; font-weight: 900; margin-bottom: 6px; font-family: 'Inter', sans-serif; }
-.subtitle { color: #64748b; font-size: 13px; margin-bottom: 28px; font-family: 'Inter', sans-serif; }
-
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; margin-bottom: 32px; }
-.kpi { padding: 24px 18px; text-align: center; position: relative; overflow: hidden; }
-.kpi::after {
-  content: ''; position: absolute; top: 0; left: -50%; width: 30%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent);
-  transform: skewX(-18deg); animation: kpiShine 6s ease-in-out infinite;
-}
-@keyframes kpiShine { 0%,70%{left:-40%;} 35%{left:120%;} }
-.kpi-val { font-size: 44px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
-.kpi-lbl { font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-family: 'Inter', sans-serif; }
-.kpi-red    { border-color: rgba(239,68,68,.2); }   .kpi-red .kpi-val  { color: #fca5a5; text-shadow: 0 0 20px var(--red-glow); }
-.kpi-amber  { border-color: rgba(251,191,36,.2); }  .kpi-amber .kpi-val{ color: #fde68a; }
-.kpi-green  { border-color: rgba(52,211,153,.2); }  .kpi-green .kpi-val{ color: #6ee7b7; }
-.kpi-purple { border-color: rgba(139,92,246,.2); }  .kpi-purple .kpi-val{ color: var(--purple); text-shadow: 0 0 20px rgba(139,92,246,.2); }
-
-.tbl-wrap { overflow-x: auto; margin-bottom: 12px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead th { text-align: left; padding: 14px 18px; color: #64748b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); font-family: 'Inter', sans-serif; }
-tbody td { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,.03); }
-.badge-n { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--red-glow); color: #fca5a5; }
-
-.empty { text-align: center; padding: 56px 24px; color: #475569; }
-.empty-icon { font-size: 64px; margin-bottom: 14px; }
-
-.log-box {
-  margin-top: 28px; padding: 20px; border-radius: 20px;
-  background: #08061a; border: 1px solid rgba(255,255,255,.04);
-  font-size: 12px; line-height: 1.8; max-height: 240px; overflow-y: auto;
-}
-.log-box::-webkit-scrollbar { width: 6px; }
-.log-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 999px; }
-.l-info { color: #79c0ff; }
-.l-warn { color: var(--amber); }
-
-.refresh-note { font-size: 11px; color: #334155; text-align: right; margin-top: 10px; font-family: 'Inter', sans-serif; }
-a { color: var(--pink); }
-</style>
-</head>
-<body class="lang-ru">
-
-<div style="max-width:960px;margin:0 auto;">
-
-  <a class="back-link" href="/chat">
-    ← <span data-lang="ru">Назад в чат</span><span data-lang="en">Back to chat</span>
-  </a>
-
-  <div class="lang-toggle">
-    <button class="lang-btn active" onclick="setLang('ru')">RU</button>
-    <button class="lang-btn" onclick="setLang('en')">EN</button>
-  </div>
-
-  <h1>📊 <span data-lang="ru">Панель Атак</span><span data-lang="en">Attack Dashboard</span></h1>
-  <p class="subtitle">
-    <span data-lang="ru">Мониторинг XSS в реальном времени — наблюдай за payload'ами</span>
-    <span data-lang="en">Real-time XSS monitoring — watch payloads execute</span>
-  </p>
-
-  <div class="kpi-grid">
-    <div class="kpi kpi-red dlglass">
-      <div class="kpi-val" id="atkCount">{{ attacks|length }}</div>
-      <div class="kpi-lbl"><span data-lang="ru">Атак Захвачено</span><span data-lang="en">Attacks Captured</span></div>
+{% block content %}
+<div class="page-shell dashboard-shell" data-page="dashboard" data-title-key="meta.dashboard"
+     data-token="{{ request.args.get('token', '')|e }}"
+     data-initial-mode="{{ mode|default('vulnerable', true)|e }}"
+     data-initial-run="{{ run_id|default('', true)|e }}">
+  <header class="workspace-heading dashboard-heading">
+    <div class="dashboard-heading-copy">
+      <a class="back-link" href="/chat">
+        <span aria-hidden="true">←</span>
+        <span data-i18n="dashboard.back">Вернуться в лабораторию</span>
+      </a>
+      <p class="eyebrow" data-i18n="dashboard.eyebrow">Наблюдение · доказательства · повторный тест</p>
+      <h1 data-i18n="dashboard.title">Панель доказательств</h1>
+      <p class="lede compact" data-i18n="dashboard.lede">Следите за цепочкой событий, не открывая DevTools во время демонстрации.</p>
     </div>
-    <div class="kpi kpi-amber dlglass">
-      <div class="kpi-val">{{ messages_count }}</div>
-      <div class="kpi-lbl"><span data-lang="ru">Сообщений</span><span data-lang="en">Messages</span></div>
+
+    <div class="dashboard-controls" aria-label="Управление панелью" data-i18n-aria-label="dashboard.controlsLabel">
+      <button class="button button-secondary" id="pauseDashboard" type="button" aria-pressed="false">
+        <span aria-hidden="true">Ⅱ</span>
+        <span data-i18n="dashboard.pause">Приостановить</span>
+      </button>
+      <button class="button button-secondary" id="projectorMode" type="button" aria-pressed="false">
+        <span aria-hidden="true">▣</span>
+        <span data-i18n="dashboard.projector">Режим проектора</span>
+      </button>
+      <button class="button button-secondary" id="exportReport" type="button">
+        <span aria-hidden="true">⇩</span>
+        <span data-i18n="dashboard.export">Экспорт JSON</span>
+      </button>
+      <button class="button button-danger" id="resetLab" type="button">
+        <span aria-hidden="true">↺</span>
+        <span data-i18n="dashboard.reset">Сбросить запуск</span>
+      </button>
     </div>
-    <div class="kpi kpi-green dlglass">
-      <div class="kpi-val">{{ uid|default('—') }}</div>
-      <div class="kpi-lbl">Your UID</div>
+  </header>
+
+  <section class="dashboard-status panel" aria-label="Состояние подключения" data-i18n-aria-label="dashboard.connectionLabel">
+    <div class="connection-status" id="connectionStatus" role="status" aria-live="polite">
+      <span class="status-symbol" aria-hidden="true">◌</span>
+      <span data-i18n="status.connecting">подключение…</span>
     </div>
-    <div class="kpi kpi-purple dlglass">
-      <div class="kpi-val">🛡️</div>
-      <div class="kpi-lbl">OWASP A03:2021</div>
+    <div class="run-context-inline">
+      <span><span data-i18n="common.mode">Режим</span>: <strong id="dashboardMode">—</strong></span>
+      <span><span data-i18n="common.run">Запуск</span>: <strong id="dashboardRun">—</strong></span>
+      <span><span data-i18n="dashboard.updated">Обновлено</span>: <strong id="lastUpdated">—</strong></span>
     </div>
+    <p class="dashboard-access-note" id="instructorAccessNotice" hidden>
+      <span aria-hidden="true">ⓘ</span>
+      <span data-i18n="dashboard.tokenNotice">Экспорт и сброс доступны по ссылке преподавателя с instructor token.</span>
+    </p>
+  </section>
+
+  <section class="kpi-grid" aria-label="Сводка запуска" data-i18n-aria-label="dashboard.summaryLabel">
+    <article class="kpi-card">
+      <span class="kpi-symbol" aria-hidden="true">◎</span>
+      <strong class="kpi-value" id="eventCount">{{ attacks|default([])|length }}</strong>
+      <span class="kpi-label" data-i18n="dashboard.kpiEvents">событий доказательства</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-symbol" aria-hidden="true">✉</span>
+      <strong class="kpi-value" id="messageCount">{{ messages_count|default(0) }}</strong>
+      <span class="kpi-label" data-i18n="dashboard.kpiMessages">сообщений в сессии</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-symbol" aria-hidden="true">♙</span>
+      <strong class="kpi-value" id="actorCount">0</strong>
+      <span class="kpi-label" data-i18n="dashboard.kpiActors">наблюдаемых ролей</span>
+    </article>
+    <article class="kpi-card kpi-control">
+      <span class="kpi-symbol" aria-hidden="true">⌁</span>
+      <strong class="kpi-value kpi-value-text" id="controlState" data-i18n="dashboard.awaiting">ожидание</strong>
+      <span class="kpi-label" data-i18n="dashboard.kpiControl">результат контроля</span>
+    </article>
+  </section>
+
+  <div class="dashboard-grid">
+    <section class="timeline-panel panel" aria-labelledby="timelineTitle">
+      <div class="panel-heading compact-heading">
+        <div>
+          <p class="section-kicker" data-i18n="dashboard.timelineKicker">Цепочка атаки</p>
+          <h2 id="timelineTitle" data-i18n="dashboard.timelineTitle">Временная шкала доказательств</h2>
+        </div>
+        <span class="live-indicator">
+          <span class="status-symbol" aria-hidden="true">●</span>
+          <span data-i18n="dashboard.live">в реальном времени</span>
+        </span>
+      </div>
+
+      <ol class="evidence-timeline" id="evidenceTimeline" role="log" aria-live="polite" aria-relevant="additions text">
+        <li class="timeline-empty" id="timelineEmpty">
+          <span class="empty-illustration" aria-hidden="true">◇ ··· ◇</span>
+          <strong data-i18n="dashboard.emptyTimelineTitle">Ожидаем первое событие</strong>
+          <p data-i18n="dashboard.emptyTimelineBody">Начните с baseline-сообщения, затем отправьте безопасный SVG-canary.</p>
+        </li>
+      </ol>
+    </section>
+
+    <aside class="explain-panel panel" aria-labelledby="explainTitle">
+      <p class="section-kicker" data-i18n="dashboard.explainKicker">Подсказка преподавателю</p>
+      <h2 id="explainTitle" data-i18n="dashboard.explainTitle">Что объяснять по цепочке</h2>
+      <ol class="explain-list">
+        <li><strong data-i18n="dashboard.explain1Title">Источник</strong><span data-i18n="dashboard.explain1Body">Как активный SVG попал в хранилище.</span></li>
+        <li><strong data-i18n="dashboard.explain2Title">Интерпретация</strong><span data-i18n="dashboard.explain2Body">Почему браузер создал активный SVG-документ.</span></li>
+        <li><strong data-i18n="dashboard.explain3Title">Воздействие</strong><span data-i18n="dashboard.explain3Body">Как действие выполнилось в контексте жертвы.</span></li>
+        <li><strong data-i18n="dashboard.explain4Title">Контроль</strong><span data-i18n="dashboard.explain4Body">Какой барьер остановил повторный тест.</span></li>
+      </ol>
+      <div class="cwe-note">
+        <span aria-hidden="true">▦</span>
+        <div><strong>CWE-79</strong><small data-i18n="dashboard.cweNote">Ненадлежащая нейтрализация ввода при формировании веб-страницы</small></div>
+      </div>
+    </aside>
   </div>
 
-  <div class="dlglass tbl-wrap">
-  {% if attacks %}
-  <table>
-    <thead><tr>
-      <th>#</th><th><span data-lang="ru">Жертва</span><span data-lang="en">Victim</span></th>
-      <th>UID</th><th>Message (truncated)</th><th>Time</th><th>IP</th>
-    </tr></thead>
-    <tbody>
-    {% for a in attacks %}
-      <tr>
-        <td><span class="badge-n">{{ a.id }}</span></td>
-        <td>{{ a.victim_user }}</td><td>{{ a.victim_uid }}</td>
-        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.message }}</td>
-        <td>{{ a.timestamp }}</td><td>{{ a.source_ip }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div class="empty">
-    <div class="empty-icon">🐑</div>
-    <p><span data-lang="ru">Атак пока нет. Загрузи SVG payload!</span><span data-lang="en">No attacks yet. Upload an SVG payload!</span></p>
-  </div>
-  {% endif %}
-  </div>
+  <section class="evidence-table-panel panel" aria-labelledby="eventTableTitle">
+    <div class="panel-heading compact-heading">
+      <div>
+        <p class="section-kicker" data-i18n="dashboard.tableKicker">Журнал запуска</p>
+        <h2 id="eventTableTitle" data-i18n="dashboard.tableTitle">Проверяемые события</h2>
+      </div>
+      <p class="table-help" id="tableHelp" data-i18n="dashboard.tableHelp">Одинаковый event ID связывает этапы одного теста.</p>
+    </div>
 
-  <p class="refresh-note">🔄 Auto-refresh every 3s</p>
+    <div class="table-scroll" tabindex="0" role="region" aria-labelledby="eventTableTitle" aria-describedby="tableHelp">
+      <table>
+        <caption data-i18n="dashboard.tableCaption">События текущего лабораторного запуска</caption>
+        <thead>
+          <tr>
+            <th scope="col" data-i18n="dashboard.colId">ID</th>
+            <th scope="col" data-i18n="dashboard.colStage">Этап</th>
+            <th scope="col" data-i18n="dashboard.colType">Тип события</th>
+            <th scope="col" data-i18n="dashboard.colActor">Роль</th>
+            <th scope="col" data-i18n="dashboard.colResult">Результат</th>
+            <th scope="col" data-i18n="dashboard.colTime">Время</th>
+          </tr>
+        </thead>
+        <tbody id="eventTableBody">
+          <tr id="eventTableEmpty">
+            <td colspan="6" class="empty-cell" data-i18n="dashboard.emptyTable">События появятся после начала сценария.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-  <div class="log-box" id="liveLog">
-    <div class="l-info">[system] Evil Sheep Trap Dashboard initialized</div>
-    {% for a in attacks %}
-    <div class="l-warn">[attack #{{ a.id }}] {{ a.timestamp }} — {{ a.victim_user }} (UID {{ a.victim_uid }}) from {{ a.source_ip }}</div>
-    {% endfor %}
-  </div>
-
+  <dialog class="confirm-dialog" id="resetDialog" aria-labelledby="resetDialogTitle">
+    <form id="resetForm" action="/clear_chat" method="post">
+      <input id="resetToken" type="hidden" name="token" value="{{ request.args.get('token', '')|e }}">
+      <span class="dialog-icon" aria-hidden="true">↺</span>
+      <h2 id="resetDialogTitle" data-i18n="dashboard.resetTitle">Сбросить текущий запуск?</h2>
+      <p data-i18n="dashboard.resetBody">Будут удалены сообщения, вложения и доказательства этой учебной сессии.</p>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancelReset" type="button" data-i18n="common.cancel">Отмена</button>
+        <button class="button button-danger" type="submit" data-i18n="dashboard.confirmReset">Сбросить запуск</button>
+      </div>
+      <div class="form-status" id="resetStatus" role="status" aria-live="polite"></div>
+    </form>
+  </dialog>
 </div>
-
-<script>
-async function refresh() {
-  try {
-    const r = await fetch('/debug/attack-dashboard/api');
-    const d = await r.json();
-    document.getElementById('atkCount').textContent = d.attacks.length;
-    const log = document.getElementById('liveLog');
-    const prev = {{ attacks|length }};
-    if (d.attacks.length > prev) {
-      const last = d.attacks[d.attacks.length-1];
-      const ln = document.createElement('div');
-      ln.className = 'l-warn';
-      ln.textContent = '[attack #' + last.id + '] ' + last.timestamp + ' — ' + last.victim_user;
-      log.appendChild(ln);
-    }
-  } catch(e) {}
-}
-setInterval(refresh, 3000);
-
-function setLang(lang) {
-  document.body.className = 'lang-' + lang;
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === lang.toUpperCase()));
-  localStorage.setItem('est-lang', lang);
-}
-const s = localStorage.getItem('est-lang'); if(s) setLang(s);
-</script>
-</body>
-</html>
+{% endblock %}

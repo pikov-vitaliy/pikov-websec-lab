@@ -1,33 +1,17 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 — Lost in Pasture</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-*, *::before, *::after { box-sizing: border-box; margin: 0; }
-body {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  font-family: 'Inter', system-ui, sans-serif; text-align: center; padding: 24px;
-  background: radial-gradient(ellipse at 30% 40%, rgba(167,139,250,.18), transparent 55%),
-              linear-gradient(135deg, #f0e7ff, #fce4ec 50%, #fff8e1);
-}
-.wrap { animation: fadeUp .6s ease both; }
-@keyframes fadeUp { from{transform:translateY(24px);opacity:0;} }
-.h { font-size: 96px; margin-bottom: 12px; filter: drop-shadow(0 12px 24px rgba(124,58,62,.12)); }
-h1 { font-size: 36px; font-weight: 900; background: linear-gradient(135deg,#7c3aed,#f472b6); -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; margin-bottom: 10px; }
-p { color: #6b7280; max-width: 400px; margin: 0 auto 28px; line-height: 1.65; }
-a { display: inline-block; padding: 14px 32px; border-radius: 24px; text-decoration: none; font-weight: 800; font-size: 15px; background: linear-gradient(135deg,#a78bfa,#f472b6); color: #fff; box-shadow: 0 8px 28px rgba(167,139,250,.3); transition: transform .2s; }
-a:hover { transform: translateY(-3px) scale(1.03); }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="h">🐑🧓</div>
-  <h1>The sheep wandered off…</h1>
-  <p>This page does not exist in the pasture. The URL you requested got lost among the clouds.</p>
-  <a href="/chat">← Back to Chat / Назад в чат</a>
-</div>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Pikov WebSec Lab — Страница не найдена{% endblock %}
+
+{% block content %}
+<section class="error-page" data-page="error" data-title-key="meta.notFound" aria-labelledby="errorTitle">
+  <div class="error-code" aria-hidden="true">404</div>
+  <div class="error-sheep" aria-hidden="true">🐑?</div>
+  <p class="eyebrow" data-i18n="error.notFoundKicker">Маршрут не входит в сценарий</p>
+  <h1 id="errorTitle" data-i18n="error.notFoundTitle">Овечка ушла с учебной тропы</h1>
+  <p class="lede compact" data-i18n="error.notFoundBody">Проверьте адрес или вернитесь на стартовую страницу лаборатории.</p>
+  <a class="button button-primary" href="/">
+    <span aria-hidden="true">←</span>
+    <span data-i18n="error.backHome">На стартовую страницу</span>
+  </a>
+</section>
+{% endblock %}

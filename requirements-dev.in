@@ -1,0 +1,11 @@
+-r requirements.in
+
+bandit[sarif]==1.8.6
+cyclonedx-bom==7.2.1
+flake8==7.3.0
+pip-audit==2.9.0
+pytest==9.1.1
+pytest-cov==7.0.0
+pytest-playwright==0.7.2
+# pbr requires setuptools; pin it so pip --require-hashes remains reproducible.
+setuptools==84.0.0
