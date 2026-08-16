@@ -1,31 +1,85 @@
-# =============================================================================
-# Evil Sheep Trap — Educational Stored XSS Training Platform
-# Docker Compose — Production / Demo profile
-# =============================================================================
+name: pikov-websec-lab
 
 services:
   svg-chat:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: evil-sheep-trap
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
+    image: pikov-websec-lab:local
+    init: true
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.75
     environment:
-      - DEBUG=false
-      - LOG_LEVEL=INFO
-      - ENABLE_DEBUG_PANEL=true
-      - UPLOAD_DIR=/data/uploads
-    volumes:
-      - upload-data:/data/uploads
+      DEBUG: "false"
+      HOST: 0.0.0.0
+      PORT: 8080
+      LAB_MODE: "${LAB_MODE:-vulnerable}"
+      SECRET_KEY: "${SECRET_KEY:-}"
+      INSTRUCTOR_TOKEN: "${INSTRUCTOR_TOKEN:-}"
+      LOG_LEVEL: INFO
+      UPLOAD_DIR: /data/uploads
+    tmpfs:
+      - /data/uploads:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=10001,gid=10001
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    networks:
+      - isolated-lab
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
-      interval: 30s
-      timeout: 5s
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)
+      interval: 20s
+      timeout: 3s
       retries: 3
       start_period: 10s
 
-volumes:
-  upload-data:
-    driver: local
+  gateway:
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine@sha256:44e36330f74d4f3a1d4e222acca9e23b401fb87811a7597024502bb759c4dd49
+    user: "101:101"
+    depends_on:
+      svg-chat:
+        condition: service_healthy
+    ports:
+      - name: web
+        target: 8080
+        published: "${LAB_PORT:-8080}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 64m
+    cpus: 0.25
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0700,uid=101,gid=101
+      - /var/run:rw,noexec,nosuid,nodev,size=1m,mode=0755,uid=101,gid=101
+    networks:
+      - isolated-lab
+      - gateway-edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  isolated-lab:
+    internal: true
+  gateway-edge:
+    driver: bridge

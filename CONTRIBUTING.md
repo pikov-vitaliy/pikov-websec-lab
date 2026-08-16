@@ -1,46 +1,99 @@
-# Contributing to Evil Sheep Trap 🐑
+# Contributing to Pikov WebSec Lab: Evil Sheep Trap
 
-Thanks for interest in improving this educational platform!
+Спасибо за вклад в учебный стенд. Изменения должны одновременно сохранять
+методическую ценность лабораторной и изоляцию намеренно уязвимого приложения.
 
-## How to Contribute
+Проект является производной работой от
+[nvmediagithub/evil_sheep_trap](https://github.com/nvmediagithub/evil_sheep_trap)
+по MIT License. Не удаляйте [LICENSE](LICENSE), [NOTICE.md](NOTICE.md) или
+attribution из README.
 
-### 1. Report Bugs
-
-Open a [GitHub Issue](../../issues) with:
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots if applicable
-
-### 2. Suggest Improvements
-
-Ideas for new lab exercises, mitigations, or features are welcome! Open an
-issue with the `enhancement` label.
-
-### 3. Submit Pull Requests
+## Перед началом
 
 ```bash
-git checkout -b feat/your-feature
-# Make changes
-git commit -m "feat: add your description"
-git push origin feat/your-feature
+git switch -c feat/short-description
+cp .env.example .env
+docker compose up --build
+curl http://127.0.0.1:8080/health
 ```
 
-**PR guidelines:**
-- Keep changes focused (one feature/fix per PR)
-- Update docs if behavior changes
-- Test with `docker compose up --build` before submitting
-- Do NOT remove intentional vulnerabilities without discussion
+Для dev-mounts используйте явный override:
 
-### 4. Improve Documentation
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yaml up --build
+```
 
-Typos, translations, clearer explanations — all are appreciated.
+Именованные Compose profiles в текущей конфигурации не используются.
 
-## Code Style
+Установите зафиксированные dev-зависимости и запускайте локальные gates:
 
-- Python: follow PEP 8, max line length 120
-- HTML: 2-space indent, semantic elements
-- Comments: explain _why_, not _what_
+```bash
+python -m pip install --require-hashes -r requirements-dev.lock
+python -m flake8 app.py src tests
+python -m pytest -q
+python -m pytest --cov=pikov_websec_lab --cov-report=term-missing --cov-fail-under=85
+```
 
-## Code of Conduct
+Первый gate проверяет стиль Python, второй — весь suite, третий дополнительно
+подтверждает установленный порог branch coverage 85%.
 
-Be respectful. This is an educational project — kindness > cleverness.
+## Требования к изменениям
+
+- Один pull request должен решать одну задачу.
+- Изменение учебного поведения сопровождайте обновлением `labs/<id>/manifest.yaml`,
+  Student Guide, Instructor Guide и проверяемого результата.
+- Не удаляйте и не расширяйте намеренную уязвимость без обсуждения модели угроз.
+- Для vulnerable и hardened поведения формулируйте отдельные критерии приемки.
+- Не выдавайте roadmap за реализованную функцию.
+- Не ослабляйте контейнер, сеть или секреты ради более эффектного payload'а.
+
+## Безопасность payload'ов
+
+Допустимый демонстрационный payload должен:
+
+- обращаться только к `127.0.0.1` или относительному маршруту стенда;
+- использовать фиксированное, не чувствительное canary-событие; одноразовые
+  `payload_id`/`marker` выдаются только самим стендом;
+- не читать cookie, local/session storage, клавиатуру, буфер обмена или файлы;
+- не загружать внешний код и не устанавливать постоянство;
+- быть безопасно повторяемым и удаляться штатным reset-процессом.
+
+Новые классы уязвимостей сначала добавляйте в roadmap. Статус `implemented`
+допустим только после появления сценария, безопасного payload'а, изоляции,
+инструкции преподавателя и теста ожидаемого результата.
+
+## Документы и данные
+
+Пишите Markdown по-русски или по-английски, используйте описательные заголовки,
+относительные ссылки и существующие изображения. Не добавляйте placeholder-ссылки
+или скриншоты, которых нет в репозитории.
+
+Категорически запрещено коммитить:
+
+- экспорты приватных чатов и переписку с авторами;
+- персональные данные, реальные имена слушателей и результаты поименно;
+- пароли, API keys, cookies, токены или заполненный `.env`;
+- материалы третьих лиц без подтвержденного права публикации.
+
+## Проверка
+
+Перед pull request:
+
+1. Запустите стенд и проверьте `/health` на `127.0.0.1`.
+2. Выполните canary-сценарий в двух изолированных браузерных профилях.
+3. Убедитесь, что reset удаляет сообщения и uploads этого экземпляра.
+4. Проверьте все локальные Markdown-ссылки и YAML manifest.
+5. Выполните lint, полный test suite и coverage gate из раздела выше. Не
+   заявляйте о CI-проверке, которой фактически нет.
+
+В PR укажите область изменения, способ проверки, влияние на vulnerable/hardened
+режимы и новые риски. Для UI-изменений приложите обезличенный скриншот.
+
+## Commit и review
+
+Используйте короткие сообщения, например `docs: split student and instructor guides`
+или `lab: add safe SVG canary`. Сохраняйте историю без учебных секретов и ответов
+в Student Guide.
+
+Ненамеренные уязвимости сообщайте приватно по процедуре из
+[SECURITY.md](SECURITY.md), а не через публичный issue.

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Pikov WebSec Lab — Требуется ссылка преподавателя{% endblock %}
+
+{% block content %}
+<section class="error-page" data-page="error" data-title-key="meta.forbidden" aria-labelledby="errorTitle">
+  <div class="error-code" aria-hidden="true">403</div>
+  <div class="error-sheep" aria-hidden="true">🐏🔒</div>
+  <p class="eyebrow" data-i18n="error.forbiddenKicker">Граница преподавательского доступа</p>
+  <h1 id="errorTitle" data-i18n="error.forbiddenTitle">Требуется ссылка преподавателя</h1>
+  <p class="lede compact" data-i18n="error.forbiddenBody">
+    Откройте полную локальную ссылку на панель, полученную от преподавателя. Не публикуйте и не пересылайте instructor token.
+  </p>
+  <div class="error-actions">
+    <a class="button button-primary" href="/chat">
+      <span aria-hidden="true">←</span>
+      <span data-i18n="error.backLab">Вернуться в лабораторию</span>
+    </a>
+    <a class="button button-secondary" href="/health" data-i18n="error.checkHealth">Проверить состояние</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru" data-locale="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef4ed">
+  <title>{% block title %}Pikov WebSec Lab{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">К основному содержанию</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Pikov WebSec Lab">
+      <span class="brand-mark" aria-hidden="true">🐑</span>
+      <span class="brand-copy">
+        <strong>Pikov WebSec Lab</strong>
+        <small data-i18n="brand.subtitle">Evil Sheep Trap · полигон Stored XSS</small>
+      </span>
+    </a>
+
+    <div class="header-tools">
+      <span class="local-only-mark">
+        <span aria-hidden="true">⌂</span>
+        <span data-i18n="brand.localOnly">только локальный стенд</span>
+      </span>
+      <div class="locale-switch" role="group" data-i18n-aria-label="locale.label" aria-label="Язык интерфейса">
+        <button class="locale-button" type="button" data-locale-value="ru" aria-pressed="true">RU</button>
+        <button class="locale-button" type="button" data-locale-value="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p class="attribution">
+      <span data-i18n="footer.basedOn">Основано на проекте</span>
+      <a class="attribution-link" href="https://github.com/nvmediagithub/evil_sheep_trap"
+         target="_blank" rel="noopener noreferrer">Evil Sheep Trap</a>
+      <span data-i18n="footer.byAuthor">автора</span>
+      <a class="attribution-link" href="https://github.com/nvmediagithub"
+         target="_blank" rel="noopener noreferrer" translate="no">@nvmediagithub</a><span data-i18n="footer.permission">, использовано с разрешения по MIT-лицензии. Спасибо автору за исходную работу.</span>
+    </p>
+  </footer>
+
+  <div id="globalStatus" class="visually-hidden" role="status" aria-live="polite"></div>
+</body>
+</html>

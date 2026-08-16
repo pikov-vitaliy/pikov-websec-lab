@@ -1,0 +1,23 @@
+services:
+  svg-chat:
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+    read_only: false
+    volumes:
+      - ./app.py:/app/app.py:ro
+      - ./src:/app/src:ro
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+      - ./labs:/app/labs:ro
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src
+          target: /app/src
+        - action: sync+restart
+          path: ./templates
+          target: /app/templates
+        - action: sync+restart
+          path: ./static
+          target: /app/static

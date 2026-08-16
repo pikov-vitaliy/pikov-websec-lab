@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=80,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pikov-websec-lab"
+version = "2.1.0"
+description = "An isolated educational lab for demonstrating stored XSS in active SVG"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["Flask==3.1.3"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+  "e2e: browser-based end-to-end checks",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["pikov_websec_lab"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true

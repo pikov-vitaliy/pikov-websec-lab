@@ -1,59 +1,79 @@
 # Security Policy
 
-## ⚠️ Important Disclaimer
+## Назначение и разрешенная область
 
-**Evil Sheep Trap is an intentionally vulnerable application designed for educational purposes.**
+Pikov WebSec Lab: Evil Sheep Trap — преднамеренно уязвимый учебный стенд. Его
+разрешено применять только на собственном компьютере или в изолированной сети,
+где владелец системы заранее разрешил упражнение всем участникам.
 
-It demonstrates real-world web vulnerabilities (Stored XSS via SVG injection) so
-that students and aspiring security professionals can learn by *seeing them in action*.
+Запрещается:
 
-## What This Project Is ✅
+- публиковать стенд в Интернет или открывать его недоверенной сети;
+- направлять payload'ы, callback'и или сканеры на сторонние системы;
+- вводить реальные пароли, токены, персональные или служебные данные;
+- использовать материалы проекта для несанкционированного доступа.
 
-- An **educational sandbox** for learning about XSS attacks
-- A **training platform** for cybersecurity courses, CTFs, and self-study
-- A **demonstration tool** showing OWASP Top 10 vulnerabilities in a controlled environment
+## Обязательная изоляция занятия
 
-## What This Project Is NOT ❌
+1. Используйте один отдельный контейнер на слушателя или учебную пару.
+2. Публикуйте веб-порт только на `127.0.0.1`. В штатном Compose-запуске наружу
+   выходит только loopback reverse proxy; само уязвимое Flask-приложение имеет
+   лишь internal Docker network. Для очного класса допустима только отдельная
+   частная сеть с фильтрацией входящего и исходящего трафика.
+3. По возможности проводите занятие без доступа в Интернет.
+4. Не монтируйте Docker socket, домашние каталоги или рабочие секреты в контейнер.
+5. Используйте только одноразовые данные и удаляйте их после занятия.
+6. Разрешайте callback'и только на маршруты этого экземпляра стенда. Публичные
+   collectors, туннели и внешние webhook-сервисы запрещены.
 
-- **NOT** a production-ready application
-- **NOT** safe to deploy on the public internet
-- **NOT** intended for use against real systems or unauthorized targets
-- **NOT** a framework for creating actual attack tools
+Текущий безопасный canary находится в
+[`labs/svg-stored-xss/canary.svg`](labs/svg-stored-xss/canary.svg): он отправляет
+фиксированное учебное событие на локальные маршруты и читает только выданные
+сервером `payload_id`/`marker` из собственного URL, но не cookie или иные данные.
 
-## Known Vulnerabilities
+## Намеренная уязвимость
 
-The following vulnerabilities are **intentional** and form the core of the training:
+Заявленная учебная уязвимость — хранимый XSS через активный SVG (`CWE-79`).
+В vulnerable-режиме приложение сохраняет SVG и встраивает его через `<object>`.
+Разрешение скриптов в таком SVG является частью упражнения, но не разрешением
+ослаблять границу контейнера или хоста.
 
-| #  | Vulnerability                | CWE     | Severity | Description                    |
-|----|-----------------------------|---------|----------|--------------------------------|
-| 1  | Stored XSS via SVG          | CWE-79  | High     | SVG files execute scripts in victim's browser |
-| 2  | Missing CSRF protection     | CWE-352 | Medium   | Cookie-based auth without tokens |
-| 3  | Insecure cookie flags       | CWE-614 | Medium   | Cookies accessible via JavaScript |
-| 4  | No file type validation     | CWE-434 | Medium   | Uploads lack MIME/content checks |
-| 5  | Missing CSP headers         | CWE-693 | Low      | No Content-Security-Policy set |
+Отсутствие строгой проверки загрузки является условием этого сценария, однако
+отдельная лабораторная CWE-434 пока не заявлена. Аналогично, отсутствие CSRF
+token и учебные cookie не являются доказательством самостоятельной эксплуатации
+CWE-352, CWE-1004 или CWE-614. Эти темы перечислены только в roadmap.
 
-## Safe Usage Guidelines
+Актуальный перечень разрешенных условий и защитных критериев задается в
+[`manifest.yaml`](labs/svg-stored-xss/manifest.yaml). Любая другая уязвимость,
+особенно RCE, выход из контейнера, чтение хостовых файлов, SSRF во внешнюю сеть
+или межпользовательская утечка, считается ненамеренной.
 
-1. **Run locally only** — use `localhost` or a private Docker network
-2. **Never expose port 8080** to the public internet
-3. **Use firewall rules** if running on a shared machine
-4. **Do not use real credentials** in the chat
-5. **Read the docs** before experimenting
+## Безопасная демонстрация
 
-## Reporting Issues
+- показывайте фиксированный canary, а не кражу cookie или keylogging;
+- заранее проговаривайте юридическую область и правила остановки;
+- не записывайте экран, если на нем могут появиться личные данные;
+- после занятия выполните `docker compose down --volumes`;
+- не переносите журналы занятия в репозиторий.
 
-If you discover an **unintentional** vulnerability (e.g., RCE via file upload,
-server-side code execution), please report it responsibly:
+## Сообщение о ненамеренной уязвимости
 
-1. Open a GitHub Issue with the label `security-bug`
-2. Describe the vulnerability and reproduction steps
-3. Do NOT include exploit code that could be misused
+Не публикуйте рабочий exploit в открытом issue. Используйте приватный
+[GitHub Security Advisory](https://github.com/pikov-vitaliy/pikov-websec-lab/security/advisories/new)
+и укажите:
 
-## Mitigations
+- затронутую версию или commit;
+- условия воспроизведения в изолированной среде;
+- ожидаемое и фактическое влияние;
+- минимальный безопасный proof of concept;
+- рекомендуемое ограничение риска.
 
-All mitigations are documented in [`docs/vulnerability-analysis.md`](docs/vulnerability-analysis.md).
-The lab guide walks you through applying each fix step by step.
+До согласованного раскрытия не включайте реальные секреты, персональные данные
+или материалы частной переписки. Исправления намеренного XSS-сценария требуют
+согласования, чтобы не разрушить учебную цель.
 
-## License
+## Лицензия и отказ от гарантий
 
-MIT — see [LICENSE](LICENSE) for details. Use responsibly.
+Проект распространяется по MIT License; см. [LICENSE](LICENSE) и
+[NOTICE.md](NOTICE.md). Лицензия не отменяет требования закона, правил владельца
+системы и явно заданной области тестирования.

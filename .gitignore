@@ -46,6 +46,10 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+artifacts/
+test-results/
+playwright-report/
+output/playwright/
 
 # Docker
 .dockerenv

@@ -1,380 +1,186 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🐑 Sheep Chat — {{ user }}</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+{% extends "base.html" %}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+{% block title %}Pikov WebSec Lab — Лаборатория{% endblock %}
 
-:root {
-  --purple-deep:  #4c1d95;
-  --purple-mid:   #7c3aed;
-  --purple-light: #a78bfa;
-  --purple-pale:  #ddd6fe;
-  --pink-accent:  #f472b6;
-  --green-chat:   #ecfdf5;
-  --green-border: #bbf7d0;
-  --radius-xl:    32px;
-  --radius-lg:    26px;
-  --radius-md:    20px;
-  --radius-pill:  999px;
-}
+{% block content %}
+<div class="page-shell lab-shell" data-page="chat" data-title-key="meta.chat"
+     data-current-user="{{ user|default('', true)|e }}" data-current-uid="{{ uid|default('', true)|e }}"
+     data-initial-mode="{{ mode|default('vulnerable', true)|e }}"
+     data-initial-run="{{ run_id|default('', true)|e }}"
+     data-dashboard-token="{{ dashboard_token|default('', true)|e }}">
+  <header class="workspace-heading">
+    <div>
+      <p class="eyebrow" data-i18n="chat.eyebrow">Практикум · Stored XSS через SVG</p>
+      <h1 data-i18n="chat.title">Учебная сессия</h1>
+      <p class="lede compact" data-i18n="chat.lede">Пройдите 7 шагов и сравните один и тот же canary в двух режимах.</p>
+    </div>
 
-html { font-size: 15px; }
-
-body {
-  min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #1e1b4b;
-  background:
-    radial-gradient(ellipse at 30% 20%, rgba(167,139,250,.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(244,114,182,.12) 0%, transparent 50%),
-    linear-gradient(160deg, #f0e7ff 0%, #fce4ec 35%, #fff8e1 65%, #e0f2fe 100%);
-}
-
-/* ══ Mesh blobs ═══════════════════════════════ */
-.mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.blob {
-  position: absolute; border-radius: 50%; filter: blur(100px); opacity: .35;
-  animation: blobMove 25s ease-in-out infinite alternate;
-}
-.blob-1 { width: 600px; height: 600px; background: #c4b5fd; top: -15%; right: -10%; }
-.blob-2 { width: 500px; height: 500px; background: #fbcfe8; bottom: -10%; left: -10%; animation-delay: -8s; }
-@keyframes blobMove {
-  0%   { transform: translate(0,0) scale(1); }
-  50%  { transform: translate(-40px,30px) scale(1.06); }
-  100% { transform: translate(20px,-20px) scale(.96); }
-}
-
-/* ══ Clouds ══════════════════════════════════ */
-.cloud-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.cloud-el { position: absolute; opacity: .25; animation: cloudDrift linear infinite; }
-@keyframes cloudDrift { from { transform: translateX(-18vw); } to { transform: translateX(118vw); } }
-
-/* ══ Sparkles ════════════════════════════════ */
-.sparkle-field { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
-.sparkle {
-  position: absolute; font-size: 16px; opacity: 0; color: var(--purple-light);
-  animation: sparkleAnim 5s ease-in-out infinite;
-}
-@keyframes sparkleAnim {
-  0%,100% { opacity:0; transform: translateY(0) scale(.4) rotate(0deg); }
-  50%     { opacity:.5; transform: translateY(-24px) scale(1) rotate(180deg); }
-}
-
-/* ══ Language toggle ═════════════════════════ */
-.lang-toggle {
-  position: fixed; top: 18px; right: 22px; z-index: 100;
-  display: flex; background: rgba(255,255,255,.5);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-radius: var(--radius-pill); padding: 3px; gap: 2px;
-  border: 1.5px solid rgba(255,255,255,.7);
-  box-shadow: 0 8px 32px rgba(124,58,62,.10);
-}
-.lang-btn {
-  padding: 6px 14px; border-radius: var(--radius-pill); border: none; cursor: pointer;
-  font-size: 12px; font-weight: 700; font-family: inherit;
-  background: transparent; color: #6d28d9; transition: all .25s;
-}
-.lang-btn.active {
-  background: linear-gradient(135deg, var(--purple-mid), var(--pink-accent));
-  color: #fff; box-shadow: 0 4px 16px rgba(124,58,62,.25);
-}
-
-[data-lang="en"] { display: none; }
-body.lang-en [data-lang="en"] { display: inline; }
-body.lang-en [data-lang="ru"] { display: none; }
-
-/* ══ Container ═══════════════════════════════ */
-.container {
-  position: relative; z-index: 10;
-  width: min(960px, calc(100vw - 28px));
-  margin: 20px auto 48px;
-}
-
-/* ══ Glass panel ═════════════════════════════ */
-.glass {
-  background: rgba(255,255,255,.4);
-  backdrop-filter: blur(24px) saturate(1.6) brightness(1.03);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6) brightness(1.03);
-  border-radius: var(--radius-xl);
-  border: 1.5px solid rgba(255,255,255,.7);
-  box-shadow: 0 4px 28px rgba(124,58,62,.07), 0 20px 60px rgba(124,58,62,.09);
-  position: relative; overflow: hidden;
-}
-.glass::before {
-  content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.2) 40%, rgba(255,255,255,.45) 48%, rgba(255,255,255,.2) 55%, transparent 60%);
-  animation: shimmer 8s ease-in-out infinite; pointer-events: none; z-index: 0;
-}
-@keyframes shimmer { 0%,75%,100%{left:-60%;} 37.5%{left:110%;} }
-
-/* ══ Top bar ════════════════════════════════ */
-.topbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 20px 24px; }
-.brand { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 900; color: var(--purple-mid); }
-.brand small { font-size: 13px; color: var(--purple-light); font-weight: 600; }
-
-.ctrls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.badge-pill {
-  background: rgba(255,255,255,.8); border: 1.5px solid #fbcfe8; color: #9d174d;
-  padding: 8px 16px; border-radius: var(--radius-pill); font-weight: 800; font-size: 13px;
-  box-shadow: 0 4px 14px rgba(244,114,182,.12);
-}
-.pill {
-  border-radius: var(--radius-pill); padding: 9px 16px; font-weight: 700; font-size: 12px;
-  text-decoration: none; border: 1.5px solid transparent; cursor: pointer;
-  transition: all .2s ease; font-family: inherit; background: rgba(255,255,255,.6);
-}
-.pill:hover { transform: translateY(-1px); }
-.pill-dash { color: #6d28d9; border-color: #ddd6fe; }
-.pill-clear  { color: #1d4ed8; border-color: #bfdbfe; }
-.pill-logout { color: #be123c; border-color: #fecdd3; }
-
-/* ══ Debug bar ═══════════════════════════════ */
-.debug-row {
-  display: flex; gap: 18px; justify-content: center; padding: 12px 16px;
-  font-size: 12px; color: var(--purple-light); font-weight: 700;
-}
-
-/* ══ Chat area ═══════════════════════════════ */
-.chat-wrap { padding: 18px 20px; margin-top: 14px; }
-.chat-box {
-  height: 560px; overflow-y: auto; padding: 24px; position: relative; z-index: 1;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.08) 100%);
-  border: 2px dashed rgba(196,181,253,.35); scroll-behavior: smooth;
-}
-.chat-box::-webkit-scrollbar { width: 8px; }
-.chat-box::-webkit-scrollbar-thumb { background: linear-gradient(var(--purple-light), var(--pink-accent)); border-radius: 999px; opacity: .6; }
-
-.empty-msg {
-  margin: 32px auto; padding: 16px 24px; max-width: 85%; text-align: center;
-  background: rgba(255,255,255,.55); color: var(--purple-mid); font-weight: 700;
-  border-radius: var(--radius-pill); border: 2px dashed rgba(124,58,62,.18);
-  backdrop-filter: blur(6px);
-}
-
-/* ══ Messages ════════════════════════════════ */
-.msg { display: flex; gap: 10px; margin: 16px 0; align-items: flex-end; animation: msgPop .25s cubic-bezier(.34,1.4,.64,1); }
-@keyframes msgPop { from{transform:translateY(12px) scale(.96);opacity:0;} to{transform:none;opacity:1;} }
-.msg.mine { flex-direction: row-reverse; }
-
-.avatar {
-  width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.8);
-  display: flex; align-items: center; justify-content: center; font-size: 26px;
-  border: 2px solid #fff; box-shadow: 0 6px 20px rgba(124,58,62,.12);
-  flex-shrink: 0; backdrop-filter: blur(6px);
-}
-
-.bubble-wrap { max-width: min(62%, 520px); display: flex; flex-direction: column; }
-.msg.mine .bubble-wrap { align-items: flex-end; }
-.bubble-name { font-size: 11px; color: #7c5a3a; opacity: .65; margin: 0 10px 4px; font-weight: 700; }
-
-.bubble {
-  background: rgba(255,255,255,.85); border: 1.5px solid #f3e8ff;
-  border-radius: 24px 24px 24px 6px; padding: 13px 18px;
-  box-shadow: 0 8px 28px rgba(167,139,250,.08), inset 0 1px 0 rgba(255,255,255,.7);
-  color: #1e1b4b; word-break: break-word; line-height: 1.55; font-size: 14px;
-  backdrop-filter: blur(8px);
-}
-.msg.mine .bubble {
-  background: linear-gradient(135deg, rgba(236,253,245,.9), rgba(240,253,244,.9));
-  border-color: var(--green-border);
-  border-radius: 24px 24px 6px 24px;
-}
-.bubble object.svg-embed { display: block; width: min(360px,100%); height: 380px; border-radius: 20px; border: 3px solid #fff; background: #fff; box-shadow: 0 14px 32px rgba(0,0,0,.06); }
-.bubble a { color: var(--purple-mid); font-weight: 700; }
-
-/* ══ Composer ════════════════════════════════ */
-.composer { display: flex; gap: 14px; align-items: flex-end; padding: 16px 20px; margin-top: 14px; }
-.msg-input {
-  flex: 1; min-height: 56px; max-height: 140px; border: none; outline: none; resize: vertical;
-  background: transparent; font-size: 15px; color: var(--purple-deep); padding: 12px 4px;
-  font-family: inherit; line-height: 1.5;
-}
-.msg-input::placeholder { color: var(--purple-light); }
-
-.file-wrap { position: relative; display: flex; align-items: center; }
-.file-wrap input[type="file"] { position: absolute; opacity: 0; width: 0; height: 0; }
-
-.icon-btn {
-  width: 54px; height: 54px; border-radius: 22px; border: none;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; cursor: pointer; flex-shrink: 0;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.3);
-  transition: transform .2s cubic-bezier(.34,1.5,.64,1);
-}
-.icon-btn:hover { transform: translateY(-3px) scale(1.06); }
-.btn-attach { background: linear-gradient(135deg, #a7f3d0, #6ee7b7); }
-.btn-send   { background: linear-gradient(135deg, var(--purple-light), var(--pink-accent)); }
-
-.fname {
-  position: absolute; bottom: -22px; right: 0; font-size: 10px;
-  color: #9ca3af; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;
-}
-
-/* ══ Warning strip ═══════════════════════════ */
-.warn-bar {
-  margin-top: 14px; padding: 14px; border-radius: var(--radius-md);
-  background: rgba(254,252,232,.5); border: 1.5px dashed rgba(253,224,71,.5);
-  text-align: center; font-size: 12px; color: #92400e; font-weight: 600;
-  backdrop-filter: blur(8px);
-}
-
-/* ══ Responsive ═════════════════════════════ */
-@media (max-width: 640px) {
-  .topbar { padding: 14px 16px; }
-  .brand { font-size: 20px; }
-  .chat-box { height: 460px; padding: 16px; }
-  .bubble-wrap { max-width: 80%; }
-}
-</style>
-</head>
-<body class="lang-ru">
-
-<!-- Background -->
-<div class="mesh"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
-<div class="cloud-layer">
-  <div class="cloud-el" style="top:10%;font-size:56px;animation-duration:30s;">☁️</div>
-  <div class="cloud-el" style="top:35%;font-size:42px;animation-duration:38s;animation-delay:-14s;">☁️</div>
-  <div class="cloud-el" style="top:65%;font-size:68px;animation-duration:34s;animation-delay:-24s;">☁️</div>
-</div>
-<div class="sparkle-field">
-  <span class="sparkle" style="left:12%;top:18%;animation-delay:0s;">✦</span>
-  <span class="sparkle" style="left:78%;top:40%;animation-delay:1.5s;">✨</span>
-  <span class="sparkle" style="left:42%;top:72%;animation-delay:.8s;">✧</span>
-  <span class="sparkle" style="left:90%;top:60%;animation-delay:2.2s;">✦</span>
-  <span class="sparkle" style="left:5%;top:78%;animation-delay:1.1s;">✨</span>
-</div>
-
-<!-- Language toggle -->
-<div class="lang-toggle">
-  <button class="lang-btn active" onclick="setLang('ru')">RU</button>
-  <button class="lang-btn" onclick="setLang('en')">EN</button>
-</div>
-
-<div class="container">
-
-  <!-- Top bar -->
-  <header class="topbar glass">
-    <div class="brand">🐑☁️ Sheep Chat <small>☕ cozy lab</small></div>
-    <div class="ctrls">
-      <span class="badge-pill">{{ user }} · ID {{ uid }}</span>
-      <a class="pill pill-dash" href="/debug/attack-dashboard">📊 Dashboard</a>
-      <form action="/clear_chat" method="post" style="display:inline;margin:0;">
-        <button class="pill pill-clear" type="submit"
-                onclick="return confirm('{{ lang_ru_clear|default('Очистить чат и файлы?') }}')">🗑️ Clear</button>
-      </form>
-      <a class="pill pill-logout" href="/logout">Logout</a>
+    <div class="workspace-actions">
+      <a class="button button-secondary" id="dashboardLink" href="/debug/attack-dashboard">
+        <span aria-hidden="true">◎</span>
+        <span data-i18n="chat.openDashboard">Панель доказательств</span>
+      </a>
+      <a class="button button-quiet" href="/logout" data-i18n="common.logout">Выйти</a>
     </div>
   </header>
 
-  <!-- Debug bar -->
-  {% if debug %}
-  <div class="glass debug-row">
-    <span>💬 {{ debug.message_count }} msgs</span>
-    <span>🛡️ {{ debug.attack_count }} attacks logged</span>
-    <span>👥 {{ debug.user_count }} users</span>
-  </div>
-  {% endif %}
-
-  <!-- Chat box -->
-  <section class="chat-wrap glass">
-    <div class="chat-box" id="chatBox">
-      <div class="empty-msg" id="emptyState">
-        <span data-lang="ru">Пока пусто... Напиши первое пушистое сообщение! 🐾</span>
-        <span data-lang="en">No messages yet — send the first fluffy one! 🐾</span>
-      </div>
-    </div>
+  <section class="run-strip" aria-label="Контекст запуска" data-i18n-aria-label="chat.runContext">
+    <span class="context-badge">
+      <span class="context-label" data-i18n="common.role">Роль</span>
+      <strong data-role-badge>—</strong>
+    </span>
+    <span class="context-badge">
+      <span class="context-label" data-i18n="common.mode">Режим</span>
+      <strong data-mode-badge>—</strong>
+    </span>
+    <span class="context-badge">
+      <span class="context-label" data-i18n="common.run">Запуск</span>
+      <strong data-run-badge>—</strong>
+    </span>
+    <span class="connection-chip" id="chatConnection">
+      <span class="status-symbol" aria-hidden="true">◌</span>
+      <span data-i18n="status.connecting">подключение…</span>
+    </span>
   </section>
 
-  <!-- Composer -->
-  <form class="composer glass" action="/send_message" method="post" enctype="multipart/form-data">
-    <textarea class="msg-input" name="message" id="msgInput"
-              data-placeholder-ru="Напиши что-нибудь пушистое... или вставь SVG payload 😉"
-              data-placeholder-en="Write something fluffy... or paste an SVG payload 😉"
-              placeholder="Напиши что-нибудь пушистое... или вставь SVG payload 😉"></textarea>
+  <div class="lab-layout">
+    <aside class="guide-panel panel" aria-labelledby="guideTitle">
+      <div class="panel-heading compact-heading">
+        <div>
+          <p class="section-kicker" data-i18n="chat.guideKicker">Маршрут занятия</p>
+          <h2 id="guideTitle" data-i18n="chat.guideTitle">7 шагов лаборатории</h2>
+        </div>
+        <span class="progress-count" id="stepProgress" aria-live="polite">0 / 7</span>
+      </div>
 
-    <div class="file-wrap">
-      <input type="file" name="attachment" id="fileInput" accept=".svg,image/svg+xml">
-      <label for="fileInput" class="icon-btn btn-attach" title="Attach SVG">📎</label>
-      <span class="fname" id="fileName"></span>
+      <ol class="guided-rail">
+        <li data-step="1">
+          <input id="step1" type="checkbox" data-step-check>
+          <label for="step1">
+            <span class="step-index" aria-hidden="true">01</span>
+            <span><strong data-i18n="chat.step1.title">Проверьте роль</strong><small data-i18n="chat.step1.body">Откройте атакующего и жертву в разных профилях браузера.</small></span>
+          </label>
+        </li>
+        <li data-step="2">
+          <input id="step2" type="checkbox" data-step-check>
+          <label for="step2">
+            <span class="step-index" aria-hidden="true">02</span>
+            <span><strong data-i18n="chat.step2.title">Создайте baseline</strong><small data-i18n="chat.step2.body">Отправьте обычное сообщение и убедитесь, что обмен работает.</small></span>
+          </label>
+        </li>
+        <li data-step="3">
+          <input id="step3" type="checkbox" data-step-check>
+          <label for="step3">
+            <span class="step-index" aria-hidden="true">03</span>
+            <span><strong data-i18n="chat.step3.title">Выберите canary</strong><small data-i18n="chat.step3.body">Используйте только файл, выданный преподавателем.</small></span>
+          </label>
+        </li>
+        <li data-step="4">
+          <input id="step4" type="checkbox" data-step-check>
+          <label for="step4">
+            <span class="step-index" aria-hidden="true">04</span>
+            <span><strong data-i18n="chat.step4.title">Загрузите SVG</strong><small data-i18n="chat.step4.body">Отправьте canary от роли атакующего выбранному получателю.</small></span>
+          </label>
+        </li>
+        <li data-step="5">
+          <input id="step5" type="checkbox" data-step-check>
+          <label for="step5">
+            <span class="step-index" aria-hidden="true">05</span>
+            <span><strong data-i18n="chat.step5.title">Наблюдайте как жертва</strong><small data-i18n="chat.step5.body">Откройте чат жертвы и отметьте видимый результат.</small></span>
+          </label>
+        </li>
+        <li data-step="6">
+          <input id="step6" type="checkbox" data-step-check>
+          <label for="step6">
+            <span class="step-index" aria-hidden="true">06</span>
+            <span><strong data-i18n="chat.step6.title">Соберите доказательства</strong><small data-i18n="chat.step6.body">Сопоставьте события на временной шкале с CWE-79.</small></span>
+          </label>
+        </li>
+        <li data-step="7">
+          <input id="step7" type="checkbox" data-step-check>
+          <label for="step7">
+            <span class="step-index" aria-hidden="true">07</span>
+            <span><strong data-i18n="chat.step7.title">Повторите после защиты</strong><small data-i18n="chat.step7.body">Запустите тот же тест и объясните причину блокировки.</small></span>
+          </label>
+        </li>
+      </ol>
+
+      <button class="button button-quiet button-full" id="resetProgress" type="button" data-i18n="chat.resetProgress">Сбросить отметки</button>
+    </aside>
+
+    <div class="chat-column">
+      <section class="warning-banner" id="vulnerableWarning" role="note">
+        <span class="warning-mark" aria-hidden="true">⚠</span>
+        <div>
+          <strong data-i18n="chat.warning.title">Сейчас включён преднамеренно уязвимый режим</strong>
+          <p data-i18n="chat.warning.body">Не вводите пароли, токены, персональные данные и не используйте стенд вне разрешённой локальной среды.</p>
+        </div>
+      </section>
+
+      <section class="canary-note panel" aria-labelledby="canaryTitle">
+        <span class="canary-icon" aria-hidden="true">◇</span>
+        <div>
+          <h2 id="canaryTitle" data-i18n="chat.canary.title">Безопасный canary вместо кражи данных</h2>
+          <p data-i18n="chat.canary.body">Разрешённый учебный SVG отправляет только фиксированную отметку в telemetry endpoint. Он не читает cookie, поля ввода или содержимое страницы.</p>
+        </div>
+      </section>
+
+      <section class="chat-panel panel" aria-labelledby="chatTitle">
+        <div class="panel-heading compact-heading">
+          <div>
+            <p class="section-kicker" data-i18n="chat.channelKicker">Общий учебный канал</p>
+            <h2 id="chatTitle" data-i18n="chat.channelTitle">Сообщения сессии</h2>
+          </div>
+          <span class="polling-note">
+            <span aria-hidden="true">↻</span>
+            <span data-i18n="chat.polling">обновляется автоматически</span>
+          </span>
+        </div>
+
+        <div class="chat-log" id="chatBox" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Сообщения чата" data-i18n-aria-label="chat.logLabel">
+          <div class="empty-state" id="emptyState">
+            <span class="empty-illustration" aria-hidden="true">🐑 ··· 🐏</span>
+            <strong data-i18n="chat.emptyTitle">Сообщений пока нет</strong>
+            <p data-i18n="chat.emptyBody">Начните с обычного сообщения, чтобы зафиксировать baseline.</p>
+          </div>
+        </div>
+
+        <form class="composer" id="messageForm" action="/send_message" method="post" enctype="multipart/form-data">
+          <div class="form-grid">
+            <div class="field field-recipient">
+              <label for="recipient" data-i18n="chat.recipientLabel">Получатель</label>
+              <select id="recipient" name="recipient">
+                <option value="all" data-i18n="chat.recipientAll">Вся сессия</option>
+                <option value="ДобраяОвечка" data-i18n="chat.recipientVictim">ДобраяОвечка · жертва</option>
+                <option value="ЗлойБаран" data-i18n="chat.recipientAttacker">ЗлойБаран · атакующий</option>
+              </select>
+            </div>
+
+            <div class="field field-message">
+              <label for="msgInput" data-i18n="chat.messageLabel">Сообщение</label>
+              <textarea id="msgInput" name="message" rows="3" maxlength="2000"
+                        data-i18n-placeholder="chat.messagePlaceholder"
+                        placeholder="Напишите обычное сообщение или добавьте выданный SVG-canary"></textarea>
+            </div>
+
+            <div class="field field-file">
+              <label for="fileInput" data-i18n="chat.fileLabel">SVG-вложение</label>
+              <input id="fileInput" name="attachment" type="file" accept=".svg,image/svg+xml" aria-describedby="fileHelp fileName">
+              <p class="field-help" id="fileHelp" data-i18n="chat.fileHelp">Только canary-файл из комплекта преподавателя. Лимит задаёт сервер.</p>
+              <p class="file-name" id="fileName" role="status" aria-live="polite" data-i18n="chat.noFile">Файл не выбран</p>
+            </div>
+          </div>
+
+          <div class="composer-footer">
+            <div class="form-status" id="composerStatus" role="status" aria-live="polite"></div>
+            <button class="button button-primary" id="sendMessage" type="submit">
+              <span aria-hidden="true">➜</span>
+              <span data-i18n="chat.send">Отправить в сессию</span>
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
-
-    <button class="icon-btn btn-send" type="submit" title="Send">🐑</button>
-  </form>
-
-  <!-- Warning -->
-  <div class="warn-bar">
-    ⚠️ <span data-lang="ru">Этот чат уязвим к SVG Stored XSS. Не вводите реальные пароли!</span>
-       <span data-lang="en">Intentionally vulnerable to SVG-based Stored XSS. Do not paste real credentials!</span>
   </div>
-
 </div>
-
-<script>
-const currentUser = {{ user|tojson }};
-let lastMessageId = 0;
-const chatBox = document.getElementById('chatBox');
-const emptyState = document.getElementById('emptyState');
-
-document.getElementById('fileInput').addEventListener('change', function() {
-  document.getElementById('fileName').textContent = this.files[0] ? this.files[0].name : '';
-});
-
-function escapeHtml(s) {
-  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-                  .replaceAll('"','&quot;').replaceAll("'","&#39;");
-}
-
-function avatarFor(name) {
-  if (/Бара/.test(name)) return '🐏';
-  if (/Овечк/.test(name)) return '🐑';
-  return '🐣';
-}
-
-async function loadMessages() {
-  const resp = await fetch('/get_messages?since=' + lastMessageId);
-  const data = await resp.json();
-  if (!data.messages.length) return;
-  if (emptyState && emptyState.parentNode) emptyState.remove();
-
-  data.messages.forEach(msg => {
-    const mine = msg.user === currentUser;
-    const div  = document.createElement('div');
-    div.className = 'msg ' + (mine ? 'mine' : 'theirs');
-    div.innerHTML = `
-      <div class="avatar">${avatarFor(msg.user)}</div>
-      <div class="bubble-wrap">
-        <div class="bubble-name">${escapeHtml(msg.user)} · ${escapeHtml(msg.time)}</div>
-        <div class="bubble">${msg.content}</div>
-      </div>`;
-    chatBox.appendChild(div);
-    lastMessageId = Math.max(lastMessageId, msg.id);
-  });
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-loadMessages();
-setInterval(loadMessages, 2000);
-
-/* ══ Language toggle ═══════════════════════ */
-function setLang(lang) {
-  document.body.className = 'lang-' + lang;
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.trim() === lang.toUpperCase());
-  });
-  const inp = document.getElementById('msgInput');
-  if (inp && inp.getAttribute('data-placeholder-' + lang))
-    inp.placeholder = inp.getAttribute('data-placeholder-' + lang);
-  localStorage.setItem('est-lang', lang);
-}
-const saved = localStorage.getItem('est-lang');
-if (saved) setLang(saved);
-</script>
-
-</body>
-</html>
+{% endblock %}

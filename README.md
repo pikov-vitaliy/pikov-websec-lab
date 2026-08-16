@@ -1,347 +1,154 @@
-<div align="center">
+# Pikov WebSec Lab: Evil Sheep Trap
 
-<!-- prettier-ignore -->
-![OWASP A03](https://img.shields.io/badge/OWASP-A03%3A2021%20Injection-%23f74420?style=flat-square&logo=owasp&logoColor=white)
-![CWE-79](https://img.shields.io/badge/CWE--79-XSS-%23ff6b6b?style=flat-square&logo=criticalstack&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.12-%233776AB?style=flat-square&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.x-%23040f1b?style=flat-square&logo=flask&logoColor=ccc)
-![Docker](https://img.shields.io/badge/Docker-Ready-%232496ED?style=flat-square&logo=docker&logoColor=white)
+Учебный стенд для безопасной демонстрации хранимого XSS через активный SVG,
+встроенный в чат с помощью `<object>`. Проект предназначен для занятий по
+безопасной разработке, контролируемых демонстраций и самостоятельной практики.
 
-<br>
+> [!CAUTION]
+> Приложение преднамеренно уязвимо. Запускайте его только на `127.0.0.1` либо в
+> изолированной учебной сети с явно разрешенными участниками. Не публикуйте порт
+> в Интернет, не используйте реальные учетные данные и не направляйте payload'ы
+> на внешние адреса или системы без письменного разрешения.
 
-# 🐑 Evil Sheep Trap — Злая Овечья Пастушь
+## Происхождение и лицензия
 
-### ☕ Уютная, преднамеренно уязвимая платформа для изучения Stored XSS через SVG-инъекции
-### A cozy, deliberately-vulnerable chat platform for learning Stored XSS via SVG injection
+Эта редакция основана на проекте
+[Evil Sheep Trap](https://github.com/nvmediagithub/evil_sheep_trap) автора
+[@nvmediagithub](https://github.com/nvmediagithub).
 
-_Песочница для кибербезопасности, где милота встречается с критичностью. Создана для студентов,_
-_CTF-участников и всех, кто верит что обучение безопасности должно быть увлекательным._
+> Спасибо автору исходного проекта за работу, открытую MIT-лицензию и основу,
+> на которой развивается эта учебная редакция.
 
-<br>
+Исходная лицензия MIT и уведомления сохранены в [LICENSE](LICENSE) и
+[NOTICE.md](NOTICE.md).
 
-![Chat Interface](screenshots/chat.png)
+## Что реализовано
 
-[Возможности](#-features-vozmozhnosti) · [Быстрый Старт](#-quick-start-bystryy-start) ·
-[Лаб. Гайд](docs/lab-guide.md) · [Анализ Уязвимостей](docs/vulnerability-analysis.md) ·
-[Архитектура](#-architecture-arhitektura)
+- две учебные персоны в отдельных браузерных сессиях;
+- загрузка SVG и его отображение как активного документа через `<object>`;
+- хранимый XSS-сценарий с безопасным локальным canary-callback;
+- неизменяемые на время процесса режимы `vulnerable` и `hardened`;
+- instructor-only журнал событий на `/debug/attack-dashboard?token=…`;
+- состояние сообщений и пользователей в памяти процесса;
+- контейнерный запуск с локальной публикацией порта.
 
-</div>
+Единственная заявленная законченная лабораторная —
+[`svg-stored-xss`](labs/svg-stored-xss/manifest.yaml). Самостоятельные сценарии
+CWE-434, CWE-352, CWE-1004/CWE-614 и CWE-639 пока находятся только в
+[roadmap](labs/README.md) и не считаются реализованными.
 
----
+## Быстрый запуск
 
-## 🎯 Возможности
-
-| Что | Detail / Подробнее |
-|------|--------|
-| 🐏 **Realistic XSS scenario** | Реалистичный Stored XSS через SVG — один из самых коварных векторов в реальном мире |
-| 🐑 **Two personas** | Готовые роли: Атакующий (ЗлойБаран) и Жертва (ДобраяОвечка) |
-| 🧪 **Step-by-step labs** | 5 упражнений: воспроизвести → починить → проверить |
-| 🛡️ **Commented-out mitigations** | CSP-заголовки уже ждут раскомментирования в `app.py` — учимся переключая защиты |
-| 🐳 **Production-grade Dockerfile** | Multi-stage, non-root user, health checks, compose + dev overrides |
-| 🔄 **CI/CD with security scanning** | Bandit SAST + Trivy container scan + dependency audit на каждый push |
-| ☕ **Cozy vibes** | Анимированные облака, пушистые овечки, пастельные градиенты — безопасность может быть милой |
-
----
-
-## 🚀 Быстрый Старт
-
-### Вариант A: Docker (Рекомендуется)
+Требуются Docker Engine и Docker Compose v2.
 
 ```bash
-git clone https://github.com/yourname/evil_sheep_trap.git
-cd evil_sheep_trap
+git clone https://github.com/pikov-vitaliy/pikov-websec-lab.git
+cd pikov-websec-lab
+cp .env.example .env
 docker compose up --build
-
-# → http://localhost:8080  🐑
 ```
 
-Проверка что всё живое:
+PowerShell-эквивалент копирования конфигурации:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+Для занятия на Windows удобнее запускать изолированный экземпляр на пару:
+
+```powershell
+.\scripts\lab.ps1 -Action start -Pair pair-01 -Mode vulnerable -Port 8080
+```
+
+Команда проверяет loopback-binding и ограничение контейнера перед запуском. Для
+повторного теста остановите этот экземпляр и запустите тот же `Pair` в режиме
+`hardened`; после занятия остановите именно созданный проект:
+
+```powershell
+.\scripts\lab.ps1 -Action stop -Pair pair-01 -Mode vulnerable -Port 8080
+```
+
+Для hardened-экземпляра укажите `-Mode hardened` с тем же `Pair` и `Port`.
+
+Пустые `SECRET_KEY` и `INSTRUCTOR_TOKEN` генерируются для одноразового запуска.
+Если преподавателю нужен стабильный reset-token между перезапусками, задайте в
+`.env` случайные учебные значения. Не используйте производственные секреты.
+Проверьте стенд:
 
 ```bash
-curl http://localhost:8080/health
-# {"status": "healthy", ...}
+curl http://127.0.0.1:8080/health
 ```
 
-### Вариант B: Локальный Python
+Затем откройте <http://127.0.0.1:8080>. Текущая Compose-конфигурация публикует
+сервис только на loopback. Именованные Compose profiles не используются.
+
+Для разработки с явным подключением локальных исходников используется отдельный
+override:
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # Linux/macOS
-pip install -r requirements.txt
-python app.py
-
-# → http://localhost:8080  🐑
+docker compose -f docker-compose.yml -f compose.dev.yaml up --build
 ```
 
-### Первая Атака (2 минуты) / Первая атака
+Остановить стенд:
 
-```text
-1. Обычный браузер    → войти как ЗлойБаран (ID 1)      🐏
-2. Инкогнито          → войти как ДобраяОвечка (ID 2)   🐑
-3. Как Баран: загрузить payloads/example-evil.svg
-4. Как Овечка: наблюдать магию 🚨
-5. Открыть /debug/attack-dashboard для просмотра захваченных событий
+```bash
+docker compose down
 ```
 
-> ⚠️ **ТОЛЬКО ДЛЯ ОБРАЗОВАТЕЛЬНЫХ ЦЕЛЕЙ.** Никогда не деплойте в открытый интернет.
-> См. [SECURITY.md](SECURITY.md) за безопасными правилами использования.
+Полный сброс одноразовых данных выполняется командой ниже. Она удаляет только
+Compose volumes этого проекта:
 
----
-
-## 🖼️ Screenshots / Скриншоты
-
-### Login Page
-
-![Login](screenshots/login.png)
-
-> 🐑 Glassmorphism card, animated gradient blobs, persona quick-login buttons. RU/EN toggle in the corner.
-
----
-
-## 🏗️ Архитектура
-
-### Компонентная Диаграмма
-
-```mermaid
-graph TB
-    subgraph Attacker["🐏 Browser — Атакующий (ЗлойБаран, uid=1)"]
-        A1["Chat UI /chat"] -->|"Upload SVG"| A2["/send_message POST"]
-        A2 -->|"evil.svg file"| A3["File Input"]
-    end
-
-    subgraph FlaskApp["🐰 Flask Application — Овечий Сервер"]
-        direction TB
-        R1["Routes: /, /chat, /login, /logout"]
-        R2["/send_message POST"]
-        R3["/api/send_message POST ⚠️ XSS Target"]
-        R4["/file/name"]
-
-        DB1[("messages[] in-memory")]
-        DB2[("users[] in-memory")]
-        DB3[("attack_log[] dashboard")]
-        DISK["📁 /data/uploads/"]
-
-        R2 -->|"Save SVG without sanitization ⚠️"| DISK
-        R2 -->|"Generate object tag"| DB1
-        R4 -->|"Serve raw SVG"| R4
-        R3 -->|"Log attack event"| DB3
-        R3 -->|"Store message"| DB1
-    end
-
-    subgraph Victim["🐑 Browser — Жертва (ДобраяОвечка, uid=2)"]
-        V1["/get_messages GET"] -->|"Poll every 2s"| V2["Chat UI /chat"]
-        V2 -->|"Load SVG via object"| R4
-        V2 -.->|"<script> executes! 🚨"| V3["Victim Context"]
-        V3 -->|"Read uid=2 cookie"| V4["fetch /api/send_message"]
-        V4 -->|"Forged message"| R3
-    end
-
-    A3 --> R2
-    V1 --> FlaskApp
-
-    style Attacker fill:#fef2f2,stroke:#f87171,stroke-width:2px
-    style FlaskApp fill:#faf5ff,stroke:#a78bfa,stroke-width:2px
-    style Victim fill:#fff7ed,stroke:#fb923c,stroke-width:2px
+```bash
+docker compose down --volumes
 ```
 
-### Атака По Шагам
+## Первый безопасный сценарий
 
-```mermaid
-sequenceDiagram
-    participant A as 🐏 Attacker<br>ЗлойБаран uid=1
-    participant S as 🐰 Server<br>Flask
-    participant V as 🐑 Victim<br>ДобраяОвечка uid=2
+1. В обычном окне войдите как `ЗлойБаран`.
+2. В приватном окне войдите как `ДобраяОвечка`.
+3. От имени атакующего выберите получателя `ДобраяОвечка` и загрузите
+   [`labs/svg-stored-xss/canary.svg`](labs/svg-stored-xss/canary.svg).
+4. Наблюдайте сетевые запросы и чат в сессии жертвы.
+5. Преподаватель открывает
+   `/debug/attack-dashboard?token=<INSTRUCTOR_TOKEN>` в своём локальном профиле
+   и сопоставляет событие с журналом; token не передается слушателям.
 
-    Note over A,V: Этап 1: Загрузка payload'а
+Canary обращается только к локальным `/api/lab-events` и `/api/send_message`,
+передает фиксированные тип события и текст с одноразовой server correlation и не
+читает cookie, клавиатуру, токены или иные данные пользователя.
 
-    A->>S: POST /send_message<br>{ svg: evil.svg }
-    S->>S: save(evil.svg) без санитизации ⚠️
-    S->>S: Generate <object> embed tag
-    S-->>A: 302 Redirect /chat
+## Методические материалы
 
-    Note over A,V: Этап 2: Жертва загружает чат
+| Документ | Назначение |
+|---|---|
+| [Student Guide](docs/student-guide.md) | Задание слушателя без ответов |
+| [Instructor Guide](docs/instructor-guide.md) | Сценарии на 10/30/60 минут, ответы и диагностика |
+| [Assessment Rubric](docs/assessment-rubric.md) | Проверяемые критерии и баллы |
+| [Architecture and Security Model](docs/architecture-and-security-model.md) | Потоки данных, границы доверия и изоляция |
+| [Vulnerability Analysis](docs/vulnerability-analysis.md) | Точная механика XSS, CSRF и cookie-контролей |
+| [Security Policy](SECURITY.md) | Допустимое использование и сообщение о дефектах |
 
-    V->>S: GET /get_messages?since=0
-    S-->>V: JSON with <object data=evil.svg>
-    V->>S: GET /file/evil.svg
-    S-->>V: Serve raw SVG content
+## Классификация лабораторной
 
-    Note over V: 🚨 Браузер рендерит SVG через <object><br/>Тег <script> выполняется!<br/>Скрипт работает в контексте Жертвы
+- CWE-79: Improper Neutralization of Input During Web Page Generation;
+- OWASP Top 10 `A05:2025 Injection` (ранее `A03:2021 Injection`);
+- `WSTG-v42-INPV-02`, `WSTG-v42-BUSL-08`, `WSTG-v42-BUSL-09`;
+- OWASP ASVS 5.0.0: `1.2.1`, `1.3.1`, `1.3.4`, `5.1.1`, `5.2.1`,
+  `5.2.2`, `5.3.1`.
 
-    V->>V: document.cookie → uid=2
-    V->>V: alert('SVG INJECTION!')
+Полная привязка и критерии защищенного поведения находятся в
+[manifest.yaml](labs/svg-stored-xss/manifest.yaml).
 
-    Note over A,V: Этап 3: Кража данных
+## Ограничения
 
-    V->>S: POST /api/send_message<br>{ msg: 'I send coins…' }
-    S-->>V: 200 OK { success: true }
-    S->>S: Log attack event to attack_log[]
+Это не production-система, не универсальный CTF и не доказательство наличия
+отдельных CSRF, IDOR или unrestricted-upload сценариев. Наличие слабого контроля
+рядом с XSS не превращает его автоматически в самостоятельную лабораторную:
+эксплуатируемость каждого класса должна быть показана отдельным тестом.
 
-    Note over V: 💰 Атака завершена!<br/>Сообщение отправлено от имени Жертвы
-```
+## Участие в разработке
 
-### Как Работает SVG-инъекция / XSS Mechanism
-
-```mermaid
-flowchart TD
-    Start["🐏 Баран загружает SVG"] --> Save{"Сервер сохраняет файл"}
-    Save -->|"Без проверки ⚠️"| Gen["Генерация &lt;object&gt; тега"]
-    Gen --> Poll["🐑 Овечка опрашивает /get_messages"]
-    Poll --> Receive["Получает HTML с &lt;object&gt; тегом"]
-    Receive --> LoadSVG["Браузер загружает SVG<br/>через GET /file/evil.svg"]
-
-    LoadSVG --> Render{"Рендеринг через<br/>&lt;object type=image/svg+xml&gt;"}
-    Render -->|"&lt;object&gt; = HTML контекст"| Script["&lt;script&gt; выполняется! 🚨"]
-
-    Script --> ReadCookie["Чтение document.cookie → uid"]
-    ReadCookie --> CheckUID{"uid == 1?"}
-    CheckUID -->|"Да, это Баран"| Safe["Пропуск — самоатака<br/>избегается 🐏"]
-    CheckUID -->|"Нет, это Жертва"| Attack["Запуск атаки!"]
-
-    Attack --> Alert["alert('SVG INJECTION!')"]
-    Alert --> Fetch["POST /api/send_message<br/>от имени жертвы"]
-    Fetch --> Done["💰 Сообщение появляется<br/>в чате от имени ДобраяОвечка"]
-
-    style Script fill:#fecaca,stroke:#ef4444,stroke-width:3px
-    style Attack fill:#fecaca,stroke:#ef4444,stroke-width:3px
-    style Done fill:#fed7aa,stroke:#f97316,stroke-width:2px
-    style Safe fill:#bbf7d0,stroke:#22c55e,stroke-width:2px
-```
-
----
-
-## 📚 Документация
-
-| Документ | Что Внутри |
-|----------|---------------|
-| [Lab Guide](docs/lab-guide.md) | 5 практических упражнений: воспроизвести → починить → создать свой payload |
-| [Vulnerability Analysis](docs/vulnerability-analysis.md) | Глубокий анализ: OWASP классификация, причины уязвимостей, код исправлений |
-| [Security Policy](SECURITY.md) | Правила безопасного использования, известные уязвимости, дисклеймер |
-
----
-
-## 📂 Структура Проекта
-
-```text
-evil_sheep_trap/
-├── app.py                          # Flask приложение (точка входа)
-├── requirements.txt                # Python зависимости
-├── Dockerfile                      # Multi-stage сборка с non-root user
-├── docker-compose.yml              # Production compose конфигурация
-├── docker-compose.override.yml     # Dev overrides (hot-reload)
-├── .env.example                    # Шаблон переменных окружения
-├── .gitignore                      # Python & Docker игноры
-│
-├── templates/                      # Jinja2 HTML шаблоны
-│   ├── login.html                  # Страница входа + быстрый логин
-│   ├── chat.html                   # Интерфейс чата с опросом
-│   ├── dashboard.html              # Панель мониторинга атак в реальном времени
-│   ├── 404.html                    # Кастомная страница ошибки
-│   └── 500.html                    # Кастомная страница серверной ошибки
-│
-├── payloads/                       # Примеры атакующих payload'ов
-│   └── example-evil.svg            # SVG XSS payload (милая овечка + скрытый скрипт)
-│
-├── docs/                           # Документация
-│   ├── vulnerability-analysis.md   # OWASP классификация & исправления
-│   └── lab-guide.md                # Пошаговые упражнения
-│
-├── screenshots/                    # Визуальные скриншоты приложения
-│   ├── gallery.html                # Интерактивная галерея всех экранов
-│   ├── login.svg                   # Страница входа (SVG превью)
-│   ├── chat.svg                    # Интерфейс чата (SVG превью)
-│   └── dashboard.svg               # Панель атак (SVG превью)
-│
-├── .github/workflows/              # CI/CD
-│   └── ci.yml                      # Lint + SAST + Docker build + Trivy scan
-│
-├── SECURITY.md                     # Политика безопасности & дисклеймер
-├── CONTRIBUTING.md                 # Руководство по вкладам
-└── LICENSE                         # MIT License
-```
-
----
-
-## 🔌 Справочник API
-
-| Method | Endpoint | Auth | Описание / Description |
-|--------|----------|------|-------------|
-| `GET`  | `/` | ❌ | Главная / страница входа |
-| `POST` | `/login` | ❌ | Установить uid cookie |
-| `GET`  | `/logout` | ❌ | Очистить uid cookie |
-| `GET`  | `/chat` | ✅ | Интерфейс чата |
-| `POST` | `/send_message` | ✅ | Отправить текстовое или SVG сообщение |
-| `GET`  | `/get_messages` | ❌ | Опрос новых сообщений (JSON) |
-| `POST` | `/api/send_message` | ✅ | **Цель XSS** — отправка через JSON |
-| `GET`  | `/whoami` | ❌ | Отладка: текущий uid + имя |
-| `GET`  | `/file/<name>` | ❌ | Сервинг загруженных файлов |
-| `POST` | `/clear_chat` | ✅ | Очистить все сообщения и файлы |
-| `GET`  | `/health` | ❌ | Liveness probe (JSON) |
-| `GET`  | `/api/info` | ❌ | Информация о платформе (JSON) |
-| `GET`  | `/debug/attack-dashboard` | ❌ | UI мониторинга атак в реальном времени |
-| `GET`  | `/debug/attack-dashboard/api` | ❌ | События атак (JSON) |
-
----
-
-## 🛡️ Образовательные Результаты
-
-После выполнения лабораторных упражнений вы сможете:
-
-- [ ] Объяснить почему `<object>` теги опасны для ненадёжного SVG контента
-- [ ] Отследить полную цепочку XSS атаки: загрузка → выполнение → эксфильтрация данных
-- [ ] Применить Content-Security-Policy заголовки для блокировки inline скриптов
-- [ ] Реализовать серверную санитизацию SVG
-- [ ] Спроектировать CSRF-устойчивые потоки аутентификации
-- [ ] Настроить безопасные флаги cookie (`HttpOnly`, `Secure`, `SameSite`)
-- [ ] Законтейнеризировать уязвимое приложение для безопасного обучения
-
----
-
-## 🎓 Для Кого Это?
-
-- **Студенты кибербезопасности** — дополните теорию из учебников реальным работающим кодом
-- **CTF новички** — практикуйте XSS в контролируемой среде
-- **DevSecOps инженеры** — продемонстрируйте уязвимости OWASP стейкхолдерам
-- **Преподаватели** — готовая лаборатория для курса по веб-безопасности
-- **Любопытные разработчики** — узнайте как выглядит "XSS" на практике прежде чем это укусит
-
----
-
-## 🏆 Бейджи
-
-<div align="center">
-
-![License](https://img.shields.io/badge/License-MIT-%235B21B6?style=flat-square)
-![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-%234ade80?style=flat-square)
-![Edu Only](https://img.shields.io/badge/Edu--Only-Yes-%23fbbf24?style=flat-square&logo=criticalrole&logoColor=white)
-
-</div>
-
----
-
-## 🤝 Вклад
-
-Pull requests welcome! См. [CONTRIBUTING.md](CONTRIBUTING.md) за руководством.
-
-**Good first issues / Хорошие первые задачи:**
-- Добавить переключатель языка Русский/English
-- Реализовать "fixed" mode который применяет все исправления
-- Написать автоматизированные тесты с pytest + selenium
-- Добавить WebSocket поддержку (заменить опрос на реалтайм)
-
----
-
-## 📜 License / Лицензия
-
-MIT — см. [LICENSE](LICENSE). Используйте ответственно. Учитесь безопасно. Оставайтесь пушистыми. ☕🐑
-
----
-
-<div align="center">
-
-_Создано с 💜 и слишком большим количеством CSS градиентов для «простого» чат-приложения._
-
-_Если вы дочитали до сюда — вы уже внимательнее чем 90% читателей README. Идите выполните лабу! 🐑_
-
-</div>
+См. [CONTRIBUTING.md](CONTRIBUTING.md). Не добавляйте в репозиторий личные данные,
+экспорты переписки, закрытые сообщения, реальные токены или материалы без права
+публикации.

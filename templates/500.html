@@ -1,33 +1,20 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>500 — Barn Fire!</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-*, *::before, *::after { box-sizing: border-box; margin: 0; }
-body {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  font-family: 'Inter', system-ui, sans-serif; text-align: center; padding: 24px;
-  background: radial-gradient(ellipse at 50% 30%, rgba(239,68,68,.12), transparent 50%),
-              linear-gradient(160deg, #0c0a1d, #1e1b4b);
-}
-.wrap { animation: fadeUp .6s ease both; color: #fde68a; }
-@keyframes fadeUp { from{transform:translateY(24px);opacity:0;} }
-.h { font-size: 88px; margin-bottom: 12px; filter: drop-shadow(0 0 30px rgba(251,191,36,.3)); }
-h1 { font-size: 34px; font-weight: 900; color: #fca5a5; margin-bottom: 10px; }
-p { color: #94a3b8; max-width: 440px; margin: 0 auto 28px; line-height: 1.65; }
-a { display: inline-block; padding: 14px 32px; border-radius: 24px; text-decoration: none; font-weight: 800; background: var(--purple, #7c3aed); color: #fff; box-shadow: 0 8px 28px rgba(124,58,62,.3); transition: transform .2s; }
-a:hover { transform: translateY(-3px) scale(1.03); }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="h">🔥🐑</div>
-  <h1>Barn on fire!</h1>
-  <p>Something went wrong on the server. The sheep are panicking and the grass is smoky.</p>
-  <a href="/chat" style="--purple:#7c3aed;">← Back to Chat / Назад в чат</a>
-</div>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Pikov WebSec Lab — Ошибка сервера{% endblock %}
+
+{% block content %}
+<section class="error-page" data-page="error" data-title-key="meta.serverError" aria-labelledby="errorTitle">
+  <div class="error-code" aria-hidden="true">500</div>
+  <div class="error-sheep" aria-hidden="true">🐑!</div>
+  <p class="eyebrow" data-i18n="error.serverKicker">Сервер не завершил шаг</p>
+  <h1 id="errorTitle" data-i18n="error.serverTitle">Сценарий временно остановлен</h1>
+  <p class="lede compact" data-i18n="error.serverBody">Вернитесь в лабораторию. Если ошибка повторится, покажите преподавателю время и выполненный шаг.</p>
+  <div class="error-actions">
+    <a class="button button-primary" href="/chat">
+      <span aria-hidden="true">←</span>
+      <span data-i18n="error.backLab">Вернуться в лабораторию</span>
+    </a>
+    <a class="button button-secondary" href="/health" data-i18n="error.checkHealth">Проверить состояние</a>
+  </div>
+</section>
+{% endblock %}
