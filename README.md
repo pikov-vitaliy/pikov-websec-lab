@@ -29,13 +29,12 @@ _CTF-участников и всех, кто верит что обучение
 
 ---
 
-## 🎯 Features / Возможности
+## 🎯 Возможности
 
 | Что | Detail / Подробнее |
 |------|--------|
 | 🐏 **Realistic XSS scenario** | Реалистичный Stored XSS через SVG — один из самых коварных векторов в реальном мире |
 | 🐑 **Two personas** | Готовые роли: Атакующий (ЗлойБаран) и Жертва (ДобраяОвечка) |
-| 📊 **Live Attack Dashboard** | Мониторинг атак в реальном времени на `/debug/attack-dashboard` |
 | 🧪 **Step-by-step labs** | 5 упражнений: воспроизвести → починить → проверить |
 | 🛡️ **Commented-out mitigations** | CSP-заголовки уже ждут раскомментирования в `app.py` — учимся переключая защиты |
 | 🐳 **Production-grade Dockerfile** | Multi-stage, non-root user, health checks, compose + dev overrides |
@@ -44,7 +43,7 @@ _CTF-участников и всех, кто верит что обучение
 
 ---
 
-## 🚀 Quick Start / Быстрый Старт
+## 🚀 Быстрый Старт
 
 ### Вариант A: Docker (Рекомендуется)
 
@@ -98,51 +97,44 @@ python app.py
 
 > 🐑 Glassmorphism card, animated gradient blobs, persona quick-login buttons. RU/EN toggle in the corner.
 
-### Attack Dashboard
-
-![Attack Dashboard — Dark theme with KPI tiles and live attack log](screenshots/dashboard.svg)
-
-> 📊 Мониторинг атак в реальном времени с KPI тайлами, таблицей событий и живым лог-окном.
-> Real-time monitoring with KPI tiles, event table, and live terminal-style logs.
-
 ---
 
-## 🏗️ Architecture / Архитектура
+## 🏗️ Архитектура
 
 ### Компонентная Диаграмма
 
 ```mermaid
 graph TB
     subgraph Attacker["🐏 Browser — Атакующий (ЗлойБаран, uid=1)"]
-        A1[Chat UI /chat] -->|Upload SVG| A2[/send_message POST/]
-        A2 -->|evil.svg file| A3[File Input]
+        A1["Chat UI /chat"] -->|"Upload SVG"| A2["/send_message POST"]
+        A2 -->|"evil.svg file"| A3["File Input"]
     end
 
     subgraph FlaskApp["🐰 Flask Application — Овечий Сервер"]
         direction TB
-        R1[Routes: /, /chat, /login, /logout]
-        R2[/send_message POST/]
-        R3[/api/send_message POST/ ⚠️ XSS Target]
-        R4[/file/name/]
+        R1["Routes: /, /chat, /login, /logout"]
+        R2["/send_message POST"]
+        R3["/api/send_message POST ⚠️ XSS Target"]
+        R4["/file/name"]
 
-        DB1[(messages[] in-memory)]
-        DB2[(users[] in-memory)]
-        DB3[(attack_log[] dashboard)]
-        DISK[📁 /data/uploads/]
+        DB1[("messages[] in-memory")]
+        DB2[("users[] in-memory")]
+        DB3[("attack_log[] dashboard")]
+        DISK["📁 /data/uploads/"]
 
-        R2 -->|Save SVG without sanitization ⚠️| DISK
-        R2 -->|Generate <object> tag| DB1
-        R4 -->|Serve raw SVG| R4
-        R3 -->|Log attack event| DB3
-        R3 -->|Store message| DB1
+        R2 -->|"Save SVG without sanitization ⚠️"| DISK
+        R2 -->|"Generate object tag"| DB1
+        R4 -->|"Serve raw SVG"| R4
+        R3 -->|"Log attack event"| DB3
+        R3 -->|"Store message"| DB1
     end
 
     subgraph Victim["🐑 Browser — Жертва (ДобраяОвечка, uid=2)"]
-        V1[/get_messages GET/] -->|Poll every 2s| V2[Chat UI /chat]
-        V2 -->|Load SVG via <object>| R4
-        V2 -.->|<script> executes! 🚨| V3[Victim Context]
-        V3 -->|Read uid=2 cookie| V4[fetch /api/send_message]
-        V4 -->|Forged message| R3
+        V1["/get_messages GET"] -->|"Poll every 2s"| V2["Chat UI /chat"]
+        V2 -->|"Load SVG via object"| R4
+        V2 -.->|"<script> executes! 🚨"| V3["Victim Context"]
+        V3 -->|"Read uid=2 cookie"| V4["fetch /api/send_message"]
+        V4 -->|"Forged message"| R3
     end
 
     A3 --> R2
@@ -153,7 +145,7 @@ graph TB
     style Victim fill:#fff7ed,stroke:#fb923c,stroke-width:2px
 ```
 
-### Атака По Шагам / Attack Flow Sequence
+### Атака По Шагам
 
 ```mermaid
 sequenceDiagram
@@ -193,23 +185,23 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Start[🐏 Баран загружает SVG] --> Save{Сервер сохраняет файл}
-    Save -->|Без проверки ⚠️| Gen[Генерация <object> тега]
-    Gen --> Poll[🐑 Овечка опрашивает /get_messages]
-    Poll --> Receive[Получает HTML с <object> тегом]
-    Receive --> LoadSVG[Браузер загружает SVG\nчерез GET /file/evil.svg]
+    Start["🐏 Баран загружает SVG"] --> Save{"Сервер сохраняет файл"}
+    Save -->|"Без проверки ⚠️"| Gen["Генерация &lt;object&gt; тега"]
+    Gen --> Poll["🐑 Овечка опрашивает /get_messages"]
+    Poll --> Receive["Получает HTML с &lt;object&gt; тегом"]
+    Receive --> LoadSVG["Браузер загружает SVG<br/>через GET /file/evil.svg"]
 
-    LoadSVG --> Render{Рендеринг через\n<object type=image/svg+xml>}
-    Render -->|<object> = HTML контекст| Script[<script> выполняется! 🚨]
+    LoadSVG --> Render{"Рендеринг через<br/>&lt;object type=image/svg+xml&gt;"}
+    Render -->|"&lt;object&gt; = HTML контекст"| Script["&lt;script&gt; выполняется! 🚨"]
 
-    Script --> ReadCookie[Чтение document.cookie → uid]
-    ReadCookie --> CheckUID{uid == 1?}
-    CheckUID-->|Да, это Баран| Safe[Пропуск — самоатака\nизбегается 🐏]
-    CheckUID-->|Нет, это Жертва| Attack[Запуск атаки!]
+    Script --> ReadCookie["Чтение document.cookie → uid"]
+    ReadCookie --> CheckUID{"uid == 1?"}
+    CheckUID -->|"Да, это Баран"| Safe["Пропуск — самоатака<br/>избегается 🐏"]
+    CheckUID -->|"Нет, это Жертва"| Attack["Запуск атаки!"]
 
-    Attack --> Alert[alert('SVG INJECTION!')]
-    Alert --> Fetch[POST /api/send_message\nот имени жертвы]
-    Fetch --> Done[💰 Сообщение появляется\nв чате от имени ДобраяОвечка]
+    Attack --> Alert["alert('SVG INJECTION!')"]
+    Alert --> Fetch["POST /api/send_message<br/>от имени жертвы"]
+    Fetch --> Done["💰 Сообщение появляется<br/>в чате от имени ДобраяОвечка"]
 
     style Script fill:#fecaca,stroke:#ef4444,stroke-width:3px
     style Attack fill:#fecaca,stroke:#ef4444,stroke-width:3px
@@ -219,7 +211,7 @@ flowchart TD
 
 ---
 
-## 📚 Documentation / Документация
+## 📚 Документация
 
 | Документ | Что Внутри |
 |----------|---------------|
@@ -229,7 +221,7 @@ flowchart TD
 
 ---
 
-## 📂 Project Structure / Структура Проекта
+## 📂 Структура Проекта
 
 ```text
 evil_sheep_trap/
@@ -271,7 +263,7 @@ evil_sheep_trap/
 
 ---
 
-## 🔌 API Reference / Справочник API
+## 🔌 Справочник API
 
 | Method | Endpoint | Auth | Описание / Description |
 |--------|----------|------|-------------|
@@ -292,7 +284,7 @@ evil_sheep_trap/
 
 ---
 
-## 🛡️ Learning Outcomes / Образовательные Результаты
+## 🛡️ Образовательные Результаты
 
 После выполнения лабораторных упражнений вы сможете:
 
@@ -306,7 +298,7 @@ evil_sheep_trap/
 
 ---
 
-## 🎓 Who Is This For? / Для Кого Это?
+## 🎓 Для Кого Это?
 
 - **Студенты кибербезопасности** — дополните теорию из учебников реальным работающим кодом
 - **CTF новички** — практикуйте XSS в контролируемой среде
@@ -316,7 +308,7 @@ evil_sheep_trap/
 
 ---
 
-## 🏆 Badges / Бейджи
+## 🏆 Бейджи
 
 <div align="center">
 
@@ -328,7 +320,7 @@ evil_sheep_trap/
 
 ---
 
-## 🤝 Contributing / Вклад
+## 🤝 Вклад
 
 Pull requests welcome! См. [CONTRIBUTING.md](CONTRIBUTING.md) за руководством.
 
