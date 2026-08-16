@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🐑 Evil Sheep Trap — Вход / Login</title>
+<style>
+/* ╔══════════════════════════════════════════════════╗
+   ║  Evil Sheep Trap — Glamour Glass Edition v2.0   ║
+   ║  Cozy vibes × Enterprise aesthetics              ║
+   ╚══════════════════════════════════════════════════╝ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --purple-deep:    #4c1d95;
+  --purple-mid:     #7c3aed;
+  --purple-light:   #a78bfa;
+  --purple-pale:    #ddd6fe;
+  --pink-accent:    #f472b6;
+  --green-soft:     #34d399;
+  --orange-warm:    #fb923c;
+  --red-alert:      #f87171;
+  --amber-glow:     #fbbf24;
+}
+
+html { font-size: 16px; }
+
+body {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #1e1b4b;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(167,139,250,.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(244,114,182,.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(251,191,36,.12) 0%, transparent 50%),
+    linear-gradient(135deg, #f0e7ff 0%, #fce4ec 30%, #fff8e1 60%, #e0f2fe 100%);
+}
+
+/* ══ Animated mesh background ═══════════════════ */
+.mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+.blob {
+  position: absolute; border-radius: 50%; filter: blur(80px); opacity: .45;
+  animation: blobFloat 20s ease-in-out infinite alternate;
+}
+.blob-1 { width: 500px; height: 500px; background: #c4b5fd; top: -10%; left: -10%; animation-duration: 22s; }
+.blob-2 { width: 400px; height: 400px; background: #fbcfe8; bottom: -10%; right: -5%; animation-duration: 18s; animation-delay: -5s; }
+.blob-3 { width: 350px; height: 350px; background: #fde68a; top: 40%; left: 50%; animation-duration: 25s; animation-delay: -10s; }
+
+@keyframes blobFloat {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(40px, -30px) scale(1.05); }
+  66%  { transform: translate(-20px, 20px) scale(.95); }
+  100% { transform: translate(10px, -10px) scale(1.02); }
+}
+
+/* ══ Floating sparkles ═══════════════════════════ */
+.sparkle-field { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+.sparkle {
+  position: absolute; font-size: 18px; opacity: 0;
+  animation: sparkleFade 4s ease-in-out infinite;
+}
+@keyframes sparkleFade {
+  0%, 100% { opacity: 0; transform: translateY(0) scale(.5); }
+  50%      { opacity: .6; transform: translateY(-30px) scale(1); }
+}
+
+/* ══ Language toggle (floating) ═════════════════ */
+.lang-toggle {
+  position: fixed; top: 20px; right: 24px; z-index: 100;
+  display: flex; background: rgba(255,255,255,.55);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-radius: 999px; padding: 4px; gap: 2px;
+  border: 1.5px solid rgba(255,255,255,.7);
+  box-shadow: 0 8px 32px rgba(124,58,62,.10);
+}
+.lang-btn {
+  padding: 7px 16px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  background: transparent; color: #6d28d9; transition: all .25s;
+}
+.lang-btn.active {
+  background: linear-gradient(135deg, var(--purple-mid), var(--pink-accent));
+  color: #fff; box-shadow: 0 4px 16px rgba(124,58,62,.25);
+}
+
+[data-lang="en"] { display: none; }
+body.lang-en [data-lang="en"] { display: inline; }
+body.lang-en [data-lang="ru"] { display: none; }
+body.lang-en [data-lang-block="en"],
+body.lang-en [data-lang-block-row="en"] { display: block; }
+body.lang-en [data-lang-block="ru"] { display: none; }
+
+/* ══ Main card (glossy glass) ═══════════════════ */
+.card {
+  position: relative; z-index: 10;
+  width: min(520px, calc(100vw - 40px));
+  padding: 44px 36px 36px;
+  background: rgba(255, 255, 255, .45);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+  border-radius: 36px;
+  border: 1.5px solid rgba(255, 255, 255, .75);
+  box-shadow:
+    0 4px 24px rgba(124,58,62,.06),
+    0 20px 60px rgba(124,58,62,.10),
+    inset 0 1px 0 rgba(255,255,255,.8);
+  animation: cardIn .7s cubic-bezier(.22,1,.36,1) both;
+  overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: -50%; right: 0; height: 100%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.3) 45%, rgba(255,255,255,.5) 50%, rgba(255,255,255,.3) 55%, transparent 60%);
+  animation: shimmer 6s ease-in-out infinite; pointer-events: none; z-index: -1;
+}
+@keyframes shimmer {
+  0%, 70%, 100% { left: -60%; }
+  35%           { left: 80%; }
+}
+@keyframes cardIn {
+  from { transform: translateY(40px) scale(.96); opacity: 0; }
+}
+
+/* ══ Version pill ═══════════════════════════════ */
+.version-pill {
+  position: absolute; top: 18px; right: 22px;
+  background: linear-gradient(135deg, var(--purple-mid), var(--pink-accent));
+  color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  padding: 6px 16px; border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(244,114,182,.3);
+}
+
+/* ══ Hero ═══════════════════════════════════════ */
+.hero-row { text-align: center; margin-bottom: 8px; }
+.hero-emoji {
+  font-size: 88px; display: inline-block; line-height: 1;
+  animation: floatSheep 3s ease-in-out infinite;
+  filter: drop-shadow(0 12px 24px rgba(124,58,62,.15));
+}
+@keyframes floatSheep {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-14px) rotate(2deg); }
+}
+
+h1 {
+  text-align: center; font-size: 32px; font-weight: 900;
+  background: linear-gradient(135deg, var(--purple-deep), var(--pink-accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; letter-spacing: -.01em; margin-bottom: 4px;
+}
+
+.subtitle {
+  text-align: center; font-size: 15px; color: var(--purple-light);
+  font-weight: 600; margin-bottom: 22px;
+}
+
+/* ══ OWASP tag ═════════════════════════════════ */
+.owasp-chip {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0 auto 24px; width: fit-content;
+  background: rgba(251,191,36,.12); border: 1.5px solid rgba(251,191,36,.4);
+  border-radius: 999px; padding: 8px 20px; font-size: 12px;
+  font-weight: 700; color: #92400e;
+  backdrop-filter: blur(8px);
+}
+
+/* ══ Threat indicator ═══════════════════════════ */
+.threat-row {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 24px; font-size: 11px; font-weight: 700; color: #dc2626;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.threat-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: #fca5a5;
+  transition: all .3s;
+}
+.threat-dot.on {
+  background: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,.5);
+  animation: threatPulse 2s ease-in-out infinite;
+}
+@keyframes threatPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+/* ══ Input ══════════════════════════════════════ */
+.field { margin-bottom: 18px; position: relative; }
+
+.input-glass {
+  width: 100%; padding: 16px 20px; border-radius: 22px;
+  border: 1.5px solid rgba(221,214,254,.6);
+  background: rgba(255,255,255,.65);
+  backdrop-filter: blur(8px);
+  color: var(--purple-deep); font-size: 15px; font-family: inherit;
+  outline: none; transition: all .25s ease;
+  box-shadow: inset 0 2px 8px rgba(124,58,62,.03), 0 2px 8px rgba(255,255,255,.5);
+}
+.input-glass::placeholder { color: #a78bfa; font-weight: 500; }
+.input-glass:focus {
+  border-color: var(--purple-light);
+  box-shadow: 0 0 0 4px rgba(167,139,250,.15), inset 0 2px 8px rgba(124,58,62,.05);
+  background: rgba(255,255,255,.8);
+}
+
+/* ══ Buttons ═══════════════════════════════════ */
+.btn {
+  display: block; width: 100%; padding: 17px 24px; border-radius: 24px;
+  border: none; cursor: pointer; font-size: 16px; font-weight: 800;
+  font-family: inherit; color: #fff;
+  position: relative; overflow: hidden;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+}
+.btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, transparent 50%);
+  border-radius: inherit; pointer-events: none;
+}
+.btn:hover { transform: translateY(-3px) scale(1.01); }
+.btn:active { transform: translateY(0) scale(.98); }
+
+.btn-glossy {
+  background: linear-gradient(135deg, #a78bfa, #c4b5fd, var(--pink-accent));
+  box-shadow: 0 8px 28px rgba(167,139,250,.3), 0 2px 0 rgba(255,255,255,.3) inset;
+}
+.btn-attacker {
+  background: linear-gradient(135deg, #fb923c, #f87171);
+  box-shadow: 0 8px 28px rgba(248,113,113,.25), 0 2px 0 rgba(255,255,255,.3) inset;
+}
+.btn-victim {
+  background: linear-gradient(135deg, #6ee7b7, var(--green-soft));
+  box-shadow: 0 8px 28px rgba(74,222,128,.25), 0 2px 0 rgba(255,255,255,.3) inset;
+}
+
+.quick-row { display: grid; gap: 12px; margin-top: 16px; }
+.quick-row form { margin: 0; }
+
+/* ══ Hint box ═══════════════════════════════════ */
+.hint-glass {
+  margin-top: 24px; padding: 20px 22px; border-radius: 22px;
+  background: rgba(254,252,232,.6); border: 1.5px solid rgba(253,224,71,.5);
+  backdrop-filter: blur(8px); color: #78350f; line-height: 1.65; font-size: 13px;
+}
+.hint-glass b { color: #92400e; }
+.hint-glass code {
+  background: rgba(255,255,255,.7); padding: 2px 8px; border-radius: 6px;
+  font-size: 12px; color: #7c2d12; font-weight: 600;
+}
+
+/* ══ Disclaimer ═════════════════════════════════ */
+.disclaimer {
+  margin-top: 20px; text-align: center; font-size: 11px;
+  color: var(--purple-light); line-height: 1.6;
+}
+.disclaimer a { color: var(--purple-mid); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ══ Floating paws at bottom ═══════════════════ */
+.paw-row {
+  position: fixed; bottom: 16px; left: 0; right: 0; z-index: 5;
+  display: flex; justify-content: space-evenly; font-size: 24px;
+  opacity: .3; pointer-events: none;
+}
+
+/* ══ Clouds ════════════════════════════════════ */
+.cloud-layer { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.cloud-el {
+  position: absolute; opacity: .35;
+  animation: cloudDrift linear infinite;
+  filter: drop-shadow(0 4px 12px rgba(167,139,250,.08));
+}
+@keyframes cloudDrift { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
+
+/* ══ Responsive ════════════════════════════════ */
+@media (max-width: 560px) {
+  .card { padding: 32px 22px 28px; border-radius: 28px; }
+  h1 { font-size: 26px; }
+  .hero-emoji { font-size: 68px; }
+}
+</style>
+</head>
+<body class="lang-ru">
+
+<!-- Mesh blobs -->
+<div class="mesh">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Clouds -->
+<div class="cloud-layer">
+  <div class="cloud-el" style="top:8%;font-size:60px;animation-duration:28s;">☁️</div>
+  <div class="cloud-el" style="top:35%;font-size:40px;animation-duration:36s;animation-delay:-12s;">☁️</div>
+  <div class="cloud-el" style="top:70%;font-size:70px;animation-duration:32s;animation-delay:-22s;">☁️</div>
+</div>
+
+<!-- Sparkles -->
+<div class="sparkle-field">
+  <span class="sparkle" style="left:15%;top:20%;animation-delay:0s;">✦</span>
+  <span class="sparkle" style="left:75%;top:30%;animation-delay:1.2s;">✧</span>
+  <span class="sparkle" style="left:45%;top:65%;animation-delay:.6s;">✨</span>
+  <span class="sparkle" style="left:85%;top:75%;animation-delay:1.8s;">✦</span>
+  <span class="sparkle" style="left:25%;top:80%;animation-delay:.9s;">✧</span>
+  <span class="sparkle" style="left:60%;top:15%;animation-delay:2.4s;">✨</span>
+</div>
+
+<!-- Language toggle -->
+<div class="lang-toggle">
+  <button class="lang-btn active" data-set-lang="ru" onclick="setLang('ru')">RU</button>
+  <button class="lang-btn" data-set-lang="en" onclick="setLang('en')">EN</button>
+</div>
+
+<!-- ══════ MAIN CARD ══════════════════════════ -->
+<div class="card">
+  <span class="version-pill">v2.0 · lab edition</span>
+
+  <!-- Hero sheep -->
+  <div class="hero-row"><span class="hero-emoji">🐑</span></div>
+
+  <h1 data-lang="ru">Evil Sheep Trap</h1>
+  <h1 data-lang="en">Evil Sheep Trap</h1>
+
+  <p class="subtitle" data-lang="ru">☕ Уютная XSS Тренировочная Песочница</p>
+  <p class="subtitle" data-lang="en">☕ Cozy XSS Training Sandbox</p>
+
+  <!-- OWASP chip -->
+  <div class="owasp-chip">
+    <span>🛡️</span>
+    <span data-lang="ru">OWASP A03:2021 — Инъекция &amp; XSS</span>
+    <span data-lang="en">OWASP A03:2021 — Injection &amp; XSS</span>
+  </div>
+
+  <!-- Threat level -->
+  <div class="threat-row">
+    <span class="threat-dot on"></span>
+    <span class="threat-dot on"></span>
+    <span class="threat-dot on"></span>
+    <span class="threat-dot"></span>
+    <span class="threat-dot"></span>
+    <span>&nbsp;THREAT: MEDIUM</span>
+  </div>
+
+  <!-- Manual login -->
+  <form action="/login" method="post">
+    <div class="field">
+      <input class="input-glass" type="text" name="username"
+             data-placeholder-ru="Придумай ник, например: ЗлойБаран"
+             data-placeholder-en="Choose a nickname, e.g. EvilRam"
+             placeholder="Придумай ник, например: ЗлойБаран"
+             required autocomplete="off">
+    </div>
+    <button class="btn btn-glossy" type="submit">
+      <span data-lang="ru">Войти в Пастбище 🌸</span>
+      <span data-lang="en">Enter the Pasture 🌸</span>
+    </button>
+  </form>
+
+  <!-- Quick login -->
+  <div class="quick-row">
+    <form action="/login" method="post">
+      <input type="hidden" name="username" value="ЗлойБаран">
+      <button class="btn btn-attacker" type="submit">🐏 ЗлойБаран (ID 1) — Attacker</button>
+    </form>
+    <form action="/login" method="post">
+      <input type="hidden" name="username" value="ДобраяОвечка">
+      <button class="btn btn-victim" type="submit">🐑 ДобраяОвечка (ID 2) — Victim</button>
+    </form>
+  </div>
+
+  <!-- Scenario hint -->
+  <div class="hint-glass">
+    <span data-lang="ru">
+      <b>🏫 Сценарий лаборатории:</b><br>
+      1) Обычный браузер → войди как <code>ЗлойБаран</code><br>
+      2) Инкогнито → войди как <code>ДобраяОвечка</code><br>
+      3) Баран загружает милый SVG со скрытым <code>&lt;script&gt;</code><br>
+      4) Овечка открывает чат → скрипт выполняется автоматически<br>
+      5) SVG проверяет <code>uid</code> cookie чтобы не атаковать себя 🤷<br>
+      6) Следи за магией на <code>/debug/attack-dashboard</code> →
+    </span>
+    <span data-lang="en">
+      <b>🏫 Lab scenario:</b><br>
+      1) Normal browser → log in as <code>ЗлойБаран</code> (EvilRam)<br>
+      2) Incognito window → log in as <code>ДобраяОвечка</code> (KindSheep)<br>
+      3) Attacker uploads a cute SVG with hidden <code>&lt;script&gt;</code><br>
+      4) Victim opens the chat → script executes automatically<br>
+      5) SVG checks <code>uid</code> cookie to avoid self-attack 🤷<br>
+      6) Watch the magic at <code>/debug/attack-dashboard</code> →
+    </span>
+  </div>
+
+  <p class="disclaimer">
+    ⚠️ <span data-lang="ru">Только для обучения — никогда не деплойте в прод. См.</span>
+         <span data-lang="en">Educational sandbox only — never deploy to production. See</span>
+    <a href="SECURITY.md">SECURITY.md</a>
+  </p>
+</div>
+
+<!-- Paws -->
+<div class="paw-row"><span>🐾</span><span>🌼</span><span>🐾</span><span>🌸</span><span>🐾</span></div>
+
+<script>
+function setLang(lang) {
+  document.body.className = 'lang-' + lang;
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.setLang === lang);
+  });
+  // Update placeholders
+  document.querySelectorAll('[data-placeholder-' + lang + ']').forEach(el => {
+    el.placeholder = el.getAttribute('data-placeholder-' + lang);
+  });
+  localStorage.setItem('est-lang', lang);
+}
+
+// Restore saved language
+const saved = localStorage.getItem('est-lang');
+if (saved) setLang(saved);
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+name: CI — Evil Sheep Trap
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ------------------------------------------------------------------
+  # Lint & dependency audit
+  # ------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt flake8 bandit safety
+
+      - name: Lint with flake8
+        run: flake8 app.py --max-line-length=120 --ignore=E501,W503 || true
+
+      - name: SAST scan with Bandit
+        run: bandit -r app.py -f json -o bandit-report.json || true
+
+      - name: Check dependencies for known vulnerabilities
+        run: safety check -r requirements.txt --json-output safety-report.json || true
+
+      - name: Upload Bandit report
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit-report.json
+
+  # ------------------------------------------------------------------
+  # Build & health-check the Docker image
+  # ------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: evil-sheep-trap:test
+          load: true
+
+      - name: Run container & health check
+        run: |
+          docker run -d --name test-container -p 8080:8080 evil-sheep-trap:test
+          sleep 5
+          curl -sf http://localhost:8080/health | python -m json.tool
+          docker stop test-container && docker rm test-container
+
+  # ------------------------------------------------------------------
+  # Trivy container scan (security)
+  # ------------------------------------------------------------------
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image for scanning
+        run: docker build -t evil-sheep-trap:trivy .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "evil-sheep-trap:trivy"
+          format: "table"
+          severity: "CRITICAL,HIGH"
+          exit-code: 1

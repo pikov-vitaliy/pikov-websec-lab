@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📊 Attack Dashboard — Evil Sheep Trap</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --purple:     #8b5cf6;
+  --pink:       #f472b6;
+  --red:        #ef4444;
+  --red-glow:   rgba(239,68,68,.2);
+  --amber:      #fbbf24;
+  --green:      #34d399;
+  --bg-deep:    #0c0a1d;
+  --surface:    rgba(255,255,255,.04);
+  --border:     rgba(255,255,255,.08);
+}
+
+body {
+  min-height: 100vh; padding: 28px 20px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  color: #e2e8f0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(139,92,246,.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(244,114,182,.08) 0%, transparent 50%),
+    linear-gradient(160deg, #0c0a1d, #1a1333 50%, #0f172a);
+}
+
+.dglass {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 24px; backdrop-filter: blur(12px);
+  box-shadow: 0 8px 36px rgba(0,0,0,.3); position: relative; overflow: hidden;
+}
+
+.lang-toggle {
+  display: flex; gap: 2px; padding: 3px; background: rgba(255,255,255,.06);
+  border-radius: 999px; border: 1px solid var(--border); width: fit-content; margin-bottom: 24px;
+}
+.lang-btn {
+  padding: 6px 14px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  background: transparent; color: #94a3b8; transition: all .25s;
+}
+.lang-btn.active { background: var(--purple); color: #fff; }
+
+[data-lang="en"] { display: none; }
+body.lang-en [data-lang="en"] { display: inline; }
+body.lang-en [data-lang="ru"] { display: none; }
+
+.back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--pink); text-decoration: none; font-size: 13px; margin-bottom: 24px; }
+.back-link:hover { text-decoration: underline; }
+
+h1 { font-size: 30px; font-weight: 900; margin-bottom: 6px; font-family: 'Inter', sans-serif; }
+.subtitle { color: #64748b; font-size: 13px; margin-bottom: 28px; font-family: 'Inter', sans-serif; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; margin-bottom: 32px; }
+.kpi { padding: 24px 18px; text-align: center; position: relative; overflow: hidden; }
+.kpi::after {
+  content: ''; position: absolute; top: 0; left: -50%; width: 30%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent);
+  transform: skewX(-18deg); animation: kpiShine 6s ease-in-out infinite;
+}
+@keyframes kpiShine { 0%,70%{left:-40%;} 35%{left:120%;} }
+.kpi-val { font-size: 44px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+.kpi-lbl { font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-family: 'Inter', sans-serif; }
+.kpi-red    { border-color: rgba(239,68,68,.2); }   .kpi-red .kpi-val  { color: #fca5a5; text-shadow: 0 0 20px var(--red-glow); }
+.kpi-amber  { border-color: rgba(251,191,36,.2); }  .kpi-amber .kpi-val{ color: #fde68a; }
+.kpi-green  { border-color: rgba(52,211,153,.2); }  .kpi-green .kpi-val{ color: #6ee7b7; }
+.kpi-purple { border-color: rgba(139,92,246,.2); }  .kpi-purple .kpi-val{ color: var(--purple); text-shadow: 0 0 20px rgba(139,92,246,.2); }
+
+.tbl-wrap { overflow-x: auto; margin-bottom: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 14px 18px; color: #64748b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); font-family: 'Inter', sans-serif; }
+tbody td { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,.03); }
+.badge-n { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--red-glow); color: #fca5a5; }
+
+.empty { text-align: center; padding: 56px 24px; color: #475569; }
+.empty-icon { font-size: 64px; margin-bottom: 14px; }
+
+.log-box {
+  margin-top: 28px; padding: 20px; border-radius: 20px;
+  background: #08061a; border: 1px solid rgba(255,255,255,.04);
+  font-size: 12px; line-height: 1.8; max-height: 240px; overflow-y: auto;
+}
+.log-box::-webkit-scrollbar { width: 6px; }
+.log-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 999px; }
+.l-info { color: #79c0ff; }
+.l-warn { color: var(--amber); }
+
+.refresh-note { font-size: 11px; color: #334155; text-align: right; margin-top: 10px; font-family: 'Inter', sans-serif; }
+a { color: var(--pink); }
+</style>
+</head>
+<body class="lang-ru">
+
+<div style="max-width:960px;margin:0 auto;">
+
+  <a class="back-link" href="/chat">
+    ← <span data-lang="ru">Назад в чат</span><span data-lang="en">Back to chat</span>
+  </a>
+
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('ru')">RU</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+
+  <h1>📊 <span data-lang="ru">Панель Атак</span><span data-lang="en">Attack Dashboard</span></h1>
+  <p class="subtitle">
+    <span data-lang="ru">Мониторинг XSS в реальном времени — наблюдай за payload'ами</span>
+    <span data-lang="en">Real-time XSS monitoring — watch payloads execute</span>
+  </p>
+
+  <div class="kpi-grid">
+    <div class="kpi kpi-red dlglass">
+      <div class="kpi-val" id="atkCount">{{ attacks|length }}</div>
+      <div class="kpi-lbl"><span data-lang="ru">Атак Захвачено</span><span data-lang="en">Attacks Captured</span></div>
+    </div>
+    <div class="kpi kpi-amber dlglass">
+      <div class="kpi-val">{{ messages_count }}</div>
+      <div class="kpi-lbl"><span data-lang="ru">Сообщений</span><span data-lang="en">Messages</span></div>
+    </div>
+    <div class="kpi kpi-green dlglass">
+      <div class="kpi-val">{{ uid|default('—') }}</div>
+      <div class="kpi-lbl">Your UID</div>
+    </div>
+    <div class="kpi kpi-purple dlglass">
+      <div class="kpi-val">🛡️</div>
+      <div class="kpi-lbl">OWASP A03:2021</div>
+    </div>
+  </div>
+
+  <div class="dlglass tbl-wrap">
+  {% if attacks %}
+  <table>
+    <thead><tr>
+      <th>#</th><th><span data-lang="ru">Жертва</span><span data-lang="en">Victim</span></th>
+      <th>UID</th><th>Message (truncated)</th><th>Time</th><th>IP</th>
+    </tr></thead>
+    <tbody>
+    {% for a in attacks %}
+      <tr>
+        <td><span class="badge-n">{{ a.id }}</span></td>
+        <td>{{ a.victim_user }}</td><td>{{ a.victim_uid }}</td>
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.message }}</td>
+        <td>{{ a.timestamp }}</td><td>{{ a.source_ip }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">🐑</div>
+    <p><span data-lang="ru">Атак пока нет. Загрузи SVG payload!</span><span data-lang="en">No attacks yet. Upload an SVG payload!</span></p>
+  </div>
+  {% endif %}
+  </div>
+
+  <p class="refresh-note">🔄 Auto-refresh every 3s</p>
+
+  <div class="log-box" id="liveLog">
+    <div class="l-info">[system] Evil Sheep Trap Dashboard initialized</div>
+    {% for a in attacks %}
+    <div class="l-warn">[attack #{{ a.id }}] {{ a.timestamp }} — {{ a.victim_user }} (UID {{ a.victim_uid }}) from {{ a.source_ip }}</div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+async function refresh() {
+  try {
+    const r = await fetch('/debug/attack-dashboard/api');
+    const d = await r.json();
+    document.getElementById('atkCount').textContent = d.attacks.length;
+    const log = document.getElementById('liveLog');
+    const prev = {{ attacks|length }};
+    if (d.attacks.length > prev) {
+      const last = d.attacks[d.attacks.length-1];
+      const ln = document.createElement('div');
+      ln.className = 'l-warn';
+      ln.textContent = '[attack #' + last.id + '] ' + last.timestamp + ' — ' + last.victim_user;
+      log.appendChild(ln);
+    }
+  } catch(e) {}
+}
+setInterval(refresh, 3000);
+
+function setLang(lang) {
+  document.body.className = 'lang-' + lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === lang.toUpperCase()));
+  localStorage.setItem('est-lang', lang);
+}
+const s = localStorage.getItem('est-lang'); if(s) setLang(s);
+</script>
+</body>
+</html>

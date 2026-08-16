@@ -1,0 +1,31 @@
+# =============================================================================
+# Evil Sheep Trap — Educational Stored XSS Training Platform
+# Docker Compose — Production / Demo profile
+# =============================================================================
+
+services:
+  svg-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: evil-sheep-trap
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - ENABLE_DEBUG_PANEL=true
+      - UPLOAD_DIR=/data/uploads
+    volumes:
+      - upload-data:/data/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  upload-data:
+    driver: local

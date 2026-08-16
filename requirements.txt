@@ -1,0 +1,8 @@
+# Evil Sheep Trap — Educational XSS Training Platform
+# ==================================================
+# Python dependencies for the vulnerable chat application.
+#
+# IMPORTANT: This application is INTENTIONALLY VULNERABLE for educational purposes.
+# DO NOT deploy to production without applying the mitigations described in docs/.
+
+flask>=3.1,<4.0
