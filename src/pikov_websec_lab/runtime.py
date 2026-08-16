@@ -103,6 +103,15 @@ class StoredUpload:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class CanaryClaim:
+    """A validated canary callback: a marker-authenticated upload and its ids."""
+
+    payload_id: str
+    marker: str
+    upload: StoredUpload
+
+
 class UploadRejected(ValueError):
     """A policy rejection with an HTTP-compatible status and correlation id."""
 

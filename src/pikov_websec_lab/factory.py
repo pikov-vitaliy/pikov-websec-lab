@@ -26,7 +26,7 @@ from flask import (
     send_from_directory,
 )
 
-from .runtime import EventType, LabMode, LabRun, UploadRejected
+from .runtime import CanaryClaim, EventType, LabMode, LabRun, UploadRejected
 
 
 LOGGER = logging.getLogger("pikov_websec_lab")
@@ -210,6 +210,27 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
             "attack_count": len(attacks),
         }
 
+    def resolve_canary_claim(
+        user: dict[str, Any], data: Mapping[str, Any]
+    ) -> tuple[CanaryClaim | None, Any]:
+        """Authenticate a canary callback shared by the two canary endpoints.
+
+        Returns ``(claim, None)`` on success, or ``(None, response)`` with a ready
+        Flask response: the attacker is ignored as ``wrong_actor`` (anti
+        self-attack), and an unknown/mismatched marker yields 403
+        ``invalid_event_marker``.
+        """
+        if user["role"] == "attacker":
+            return None, jsonify(
+                {"success": True, "ignored": True, "reason": "wrong_actor"}
+            )
+        payload_id = str(data.get("payload_id") or "")
+        marker = str(data.get("marker") or "")
+        upload = runtime.validate_upload_marker(payload_id, marker)
+        if upload is None:
+            return None, (jsonify({"error": "invalid_event_marker"}), 403)
+        return CanaryClaim(payload_id=payload_id, marker=marker, upload=upload), None
+
     @app.after_request
     def apply_mode_headers(response: Response) -> Response:
         response.headers["X-Lab-Mode"] = runtime.mode.value
@@ -351,18 +372,10 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
             return jsonify({"error": "empty_message"}), 400
 
         if data.get("lab_event") == EventType.FORGED_ACTION.value:
-            payload_id = str(data.get("payload_id") or "")
-            marker = str(data.get("marker") or "")
-            # Only the attacker is barred from acting as the victim (this prevents
-            # a self-triggered canary). The seeded victim OR any self-named learner
-            # who actually received the payload may complete the victim half.
-            if user["role"] == "attacker":
-                return jsonify(
-                    {"success": True, "ignored": True, "reason": "wrong_actor"}
-                )
-            upload = runtime.validate_upload_marker(payload_id, marker)
-            if upload is None:
-                return jsonify({"error": "invalid_event_marker"}), 403
+            claim, error = resolve_canary_claim(user, data)
+            if error is not None:
+                return error
+            payload_id = claim.payload_id
             if not runtime.has_event(
                 EventType.PAYLOAD_EXECUTED,
                 payload_id=payload_id,
@@ -416,21 +429,14 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
         event_name = data.get("type") or data.get("lab_event")
         if event_name != EventType.PAYLOAD_EXECUTED.value:
             return jsonify({"error": "unsupported_event_type"}), 400
-        # See api_send_message: block only the attacker, not other learners.
-        if user["role"] == "attacker":
-            return jsonify(
-                {"success": True, "ignored": True, "reason": "wrong_actor"}
-            )
-        payload_id = str(data.get("payload_id") or "")
-        marker = str(data.get("marker") or "")
-        upload = runtime.validate_upload_marker(payload_id, marker)
-        if upload is None:
-            return jsonify({"error": "invalid_event_marker"}), 403
+        claim, error = resolve_canary_claim(user, data)
+        if error is not None:
+            return error
         event, created = runtime.record_event(
             EventType.PAYLOAD_EXECUTED,
-            payload_id=payload_id,
+            payload_id=claim.payload_id,
             actor_uid=user["uid"],
-            dedupe_key=f"{payload_id}:payload-executed:{user['uid']}",
+            dedupe_key=f"{claim.payload_id}:payload-executed:{user['uid']}",
             details={"result": "observed"},
         )
         return jsonify(
