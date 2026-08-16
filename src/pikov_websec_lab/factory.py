@@ -353,7 +353,10 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
         if data.get("lab_event") == EventType.FORGED_ACTION.value:
             payload_id = str(data.get("payload_id") or "")
             marker = str(data.get("marker") or "")
-            if user["role"] != "victim":
+            # Only the attacker is barred from acting as the victim (this prevents
+            # a self-triggered canary). The seeded victim OR any self-named learner
+            # who actually received the payload may complete the victim half.
+            if user["role"] == "attacker":
                 return jsonify(
                     {"success": True, "ignored": True, "reason": "wrong_actor"}
                 )
@@ -413,7 +416,8 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
         event_name = data.get("type") or data.get("lab_event")
         if event_name != EventType.PAYLOAD_EXECUTED.value:
             return jsonify({"error": "unsupported_event_type"}), 400
-        if user["role"] != "victim":
+        # See api_send_message: block only the attacker, not other learners.
+        if user["role"] == "attacker":
             return jsonify(
                 {"success": True, "ignored": True, "reason": "wrong_actor"}
             )
@@ -537,3 +541,9 @@ def _register_routes(app: Flask, runtime: LabRun) -> None:
         if request.path.startswith("/api/") or request.path.startswith("/debug/"):
             return jsonify({"error": "not_found"}), 404
         return render_template("404.html"), 404
+
+    @app.errorhandler(500)
+    def server_error(_: Exception) -> Any:
+        if request.path.startswith("/api/") or request.path.startswith("/debug/"):
+            return jsonify({"error": "internal_server_error"}), 500
+        return render_template("500.html"), 500

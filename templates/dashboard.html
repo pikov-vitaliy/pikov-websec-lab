@@ -50,7 +50,7 @@
     </div>
     <p class="dashboard-access-note" id="instructorAccessNotice" hidden>
       <span aria-hidden="true">ⓘ</span>
-      <span data-i18n="dashboard.tokenNotice">Экспорт и сброс доступны по ссылке преподавателя с instructor token.</span>
+      <span data-i18n="dashboard.tokenNotice">Экспорт открыт по instructor token; сброс дополнительно требует вход преподавателя (сессию).</span>
     </p>
   </section>
 
@@ -121,7 +121,7 @@
         <p class="section-kicker" data-i18n="dashboard.tableKicker">Журнал запуска</p>
         <h2 id="eventTableTitle" data-i18n="dashboard.tableTitle">Проверяемые события</h2>
       </div>
-      <p class="table-help" id="tableHelp" data-i18n="dashboard.tableHelp">Одинаковый event ID связывает этапы одного теста.</p>
+      <p class="table-help" id="tableHelp" data-i18n="dashboard.tableHelp">Общий payload_id связывает этапы одного теста; номер в столбце ID у каждого события свой.</p>
     </div>
 
     <div class="table-scroll" tabindex="0" role="region" aria-labelledby="eventTableTitle" aria-describedby="tableHelp">
@@ -130,6 +130,7 @@
         <thead>
           <tr>
             <th scope="col" data-i18n="dashboard.colId">ID</th>
+            <th scope="col" data-i18n="dashboard.colPayload">payload_id</th>
             <th scope="col" data-i18n="dashboard.colStage">Этап</th>
             <th scope="col" data-i18n="dashboard.colType">Тип события</th>
             <th scope="col" data-i18n="dashboard.colActor">Роль</th>
@@ -139,7 +140,7 @@
         </thead>
         <tbody id="eventTableBody">
           <tr id="eventTableEmpty">
-            <td colspan="6" class="empty-cell" data-i18n="dashboard.emptyTable">События появятся после начала сценария.</td>
+            <td colspan="7" class="empty-cell" data-i18n="dashboard.emptyTable">События появятся после начала сценария.</td>
           </tr>
         </tbody>
       </table>

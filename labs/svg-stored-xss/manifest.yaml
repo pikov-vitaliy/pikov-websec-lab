@@ -53,7 +53,7 @@ scenario:
     event_type: PAYLOAD_EXECUTED
     correlation: "Server-issued payload_id and marker"
     forged_action_text: "🐑 Safe canary: forged action demonstrated"
-    accepted_actor: "victim (seeded uid=2)"
+    accepted_actor: "any non-attacker (seeded victim uid=2 or a self-named learner)"
 
 mappings:
   cwe:

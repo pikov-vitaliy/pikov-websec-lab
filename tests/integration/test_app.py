@@ -452,6 +452,69 @@ def test_canary_rejects_unknown_marker_without_recording_an_event(tmp_path):
     assert types == ["UPLOAD_ACCEPTED"]
 
 
+def test_self_named_learner_can_act_as_victim_for_broadcast_canary(tmp_path):
+    app = build_app(tmp_path)
+    attacker = app.test_client()
+    learner = app.test_client()
+    login(attacker, "ЗлойБаран")
+    login(learner, "Vasya")
+
+    assert learner.get("/whoami").get_json() == {
+        "uid": 3,
+        "user": "Vasya",
+        "role": "learner",
+    }
+
+    broadcast = attacker.post(
+        "/send_message",
+        data={
+            "attachment": (io.BytesIO(SVG_PAYLOAD), "canary.svg", "image/svg+xml"),
+            "recipient": "all",
+        },
+        content_type="multipart/form-data",
+    )
+    assert broadcast.status_code == 302
+
+    file_url, payload_id, marker = extract_canary(learner)
+    assert learner.get(file_url).status_code == 200
+
+    executed = learner.post(
+        "/api/lab-events",
+        json={"type": "PAYLOAD_EXECUTED", "payload_id": payload_id, "marker": marker},
+    )
+    forged = learner.post(
+        "/api/send_message",
+        json={
+            "text": "forged by a learner",
+            "payload_id": payload_id,
+            "marker": marker,
+            "lab_event": "FORGED_ACTION",
+        },
+    )
+    attacker_attempt = attacker.post(
+        "/api/lab-events",
+        json={"type": "PAYLOAD_EXECUTED", "payload_id": payload_id, "marker": marker},
+    )
+
+    assert executed.get_json()["created"] is True
+    assert forged.get_json()["created"] is True
+    assert attacker_attempt.get_json() == {
+        "success": True,
+        "ignored": True,
+        "reason": "wrong_actor",
+    }
+
+    events = dashboard_api(learner).get_json()["events"]
+    assert [event["type"] for event in events] == [
+        "UPLOAD_ACCEPTED",
+        "SVG_SERVED",
+        "PAYLOAD_EXECUTED",
+        "FORGED_ACTION",
+        "CONTROL_ALLOWED",
+    ]
+    assert events[2]["actor_uid"] == 3
+
+
 def test_hardened_mode_rejects_same_svg_and_sets_security_headers(tmp_path):
     client = build_app(tmp_path, mode="hardened").test_client()
     login(client, "ЗлойБаран")
@@ -564,6 +627,29 @@ def test_report_export_requires_instructor_token(tmp_path):
     assert allowed.status_code == 200
     assert allowed.get_json()["schema_version"] == "1.0"
     assert "attachment" in allowed.headers["Content-Disposition"]
+
+
+def test_internal_error_returns_json_for_api_and_template_for_pages(tmp_path):
+    app = build_app(tmp_path)
+    app.config["PROPAGATE_EXCEPTIONS"] = False
+
+    @app.get("/api/boom")
+    def api_boom():
+        raise RuntimeError("kaboom")
+
+    @app.get("/boom")
+    def page_boom():
+        raise RuntimeError("kaboom")
+
+    client = app.test_client()
+    api = client.get("/api/boom")
+    page = client.get("/boom")
+
+    assert api.status_code == 500
+    assert api.get_json() == {"error": "internal_server_error"}
+    assert page.status_code == 500
+    assert page.mimetype == "text/html"
+    assert 'data-page="error"' in page.get_data(as_text=True)
 
 
 def test_injected_runtimes_keep_two_apps_isolated(tmp_path):

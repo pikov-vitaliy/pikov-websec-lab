@@ -123,7 +123,7 @@
       "dashboard.export": "Экспорт JSON",
       "dashboard.reset": "Сбросить запуск",
       "dashboard.connectionLabel": "Состояние подключения",
-      "dashboard.tokenNotice": "Экспорт и сброс доступны по ссылке преподавателя с instructor token.",
+      "dashboard.tokenNotice": "Экспорт открыт по instructor token; сброс дополнительно требует вход преподавателя (сессию).",
       "dashboard.updated": "Обновлено",
       "dashboard.summaryLabel": "Сводка запуска",
       "dashboard.kpiEvents": "событий доказательства",
@@ -152,9 +152,10 @@
       "dashboard.cweNote": "Ненадлежащая нейтрализация ввода при формировании веб-страницы",
       "dashboard.tableKicker": "Журнал запуска",
       "dashboard.tableTitle": "Проверяемые события",
-      "dashboard.tableHelp": "Одинаковый event ID связывает этапы одного теста.",
+      "dashboard.tableHelp": "Общий payload_id связывает этапы одного теста; номер в столбце ID у каждого события свой.",
       "dashboard.tableCaption": "События текущего лабораторного запуска",
       "dashboard.colId": "ID",
+      "dashboard.colPayload": "payload_id",
       "dashboard.colStage": "Этап",
       "dashboard.colType": "Тип события",
       "dashboard.colActor": "Роль",
@@ -311,7 +312,7 @@
       "dashboard.export": "Export JSON",
       "dashboard.reset": "Reset run",
       "dashboard.connectionLabel": "Connection status",
-      "dashboard.tokenNotice": "Export and reset require the instructor link with an instructor token.",
+      "dashboard.tokenNotice": "Export needs the instructor token; reset additionally requires an instructor login (session).",
       "dashboard.updated": "Updated",
       "dashboard.summaryLabel": "Run summary",
       "dashboard.kpiEvents": "evidence events",
@@ -340,9 +341,10 @@
       "dashboard.cweNote": "Improper neutralization of input during web page generation",
       "dashboard.tableKicker": "Run log",
       "dashboard.tableTitle": "Verifiable events",
-      "dashboard.tableHelp": "The same event ID connects stages of one test.",
+      "dashboard.tableHelp": "A shared payload_id links the stages of one test; the ID column is unique per event.",
       "dashboard.tableCaption": "Events in the current lab run",
       "dashboard.colId": "ID",
+      "dashboard.colPayload": "payload_id",
       "dashboard.colStage": "Stage",
       "dashboard.colType": "Event type",
       "dashboard.colActor": "Role",
@@ -762,7 +764,8 @@
     const timestamp = raw.timestamp || raw.time || raw.created_at || "—";
     const detailValue = raw.message || raw.description || raw.detail || raw.details?.message || raw.details?.reason || raw.details?.filename || "";
     const detail = typeof detailValue === "string" ? detailValue : JSON.stringify(detailValue);
-    return { id: String(id), type: String(type), stage, actor: String(actor), result, timestamp: String(timestamp), detail };
+    const payloadId = String(raw.payload_id ?? raw.payloadId ?? "—");
+    return { id: String(id), payloadId, type: String(type), stage, actor: String(actor), result, timestamp: String(timestamp), detail };
   }
 
   function inferStage(type) {
@@ -871,7 +874,7 @@
     if (!events.length) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 6;
+      cell.colSpan = 7;
       cell.className = "empty-cell";
       cell.textContent = translate("dashboard.emptyTable");
       row.append(cell);
@@ -881,7 +884,7 @@
 
     events.forEach((event) => {
       const row = document.createElement("tr");
-      const values = [event.id, stageLabel(event.stage), event.type, event.actor];
+      const values = [event.id, event.payloadId, stageLabel(event.stage), event.type, event.actor];
       values.forEach((value) => {
         const cell = document.createElement("td");
         cell.textContent = value;
