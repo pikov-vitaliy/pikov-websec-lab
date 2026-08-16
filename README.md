@@ -13,7 +13,12 @@
 ## Происхождение и лицензия
 
 Эта редакция основана на проекте
-[nvmediagithub/evil_sheep_trap](https://github.com/nvmediagithub/evil_sheep_trap).
+[Evil Sheep Trap](https://github.com/nvmediagithub/evil_sheep_trap) автора
+[@nvmediagithub](https://github.com/nvmediagithub).
+
+> Спасибо автору исходного проекта за работу, открытую MIT-лицензию и основу,
+> на которой развивается эта учебная редакция.
+
 Исходная лицензия MIT и уведомления сохранены в [LICENSE](LICENSE) и
 [NOTICE.md](NOTICE.md).
 
