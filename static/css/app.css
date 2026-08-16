@@ -182,6 +182,31 @@ code,
   gap: 1rem;
 }
 
+.site-footer {
+  width: min(calc(100% - 2rem), var(--content));
+  margin: 1.5rem auto 2rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.site-footer .attribution {
+  margin: 0;
+}
+
+.attribution-link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.attribution-link:hover,
+.attribution-link:focus-visible {
+  text-decoration-thickness: 2px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
